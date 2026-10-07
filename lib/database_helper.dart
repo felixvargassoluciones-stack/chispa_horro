@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'package:flutter/foundation.dart';
+import 'package:flutter/foundation.dart'; // 🚀 SOPORTE WEB: Importación necesaria para usar kIsWeb
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 
@@ -17,8 +17,15 @@ class DatabaseHelper {
   }
 
   Future<Database> _initDatabase() async {
-    final dbPath = await getDatabasesPath();
-    final pathString = join(dbPath, 'chispahorro.db');
+    String pathString;
+
+    // 🚀 INTERCEPTOR WEB: Si corre en navegador, evitamos pedir carpetas internas del celular
+    if (kIsWeb) {
+      pathString = 'chispahorro.db'; // Mapea directo al IndexedDB del navegador de forma segura
+    } else {
+      final dbPath = await getDatabasesPath();
+      pathString = join(dbPath, 'chispahorro.db');
+    }
 
     final db = await openDatabase(
       pathString,
@@ -34,7 +41,11 @@ class DatabaseHelper {
   }
 
   Future<void> _onConfigure(Database db) async {
-    await db.execute('PRAGMA foreign_keys = ON;');
+    // 🚀 COMPATIBILIDAD WEB: PRAGMA foreign_keys solo se ejecuta en entornos móviles,
+    // ya que las bases de datos WASM web manejan las restricciones de forma nativa en su núcleo.
+    if (!kIsWeb) {
+      await db.execute('PRAGMA foreign_keys = ON;');
+    }
   }
 
   Future<void> _onCreate(Database db, int version) async {
