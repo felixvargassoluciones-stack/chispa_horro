@@ -1,0 +1,55 @@
+name: Desplegar ChispaHorro en GitHub Pages
+
+on:
+  push:
+    branches:
+      - main # Ejecuta la automatización cada vez que subas cambios a la rama principal
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Descargar el código del repositorio
+      - name: Checkout del código
+        uses: actions/checkout@v4
+
+      # 2. Configurar el entorno de Java (Requisito interno del ecosistema)
+      - name: Configurar Java
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      # 3. Instalar la versión oficial y estable de Flutter
+      - name: Configurar Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+
+      # 4. Descargar todas las librerías del proyecto (incluyendo nuestro adaptador web)
+      - name: Instalar dependencias
+        run: flutter pub get
+
+      # 5. Compilar la aplicación en modo Web WebAssembly/HTML5
+      - name: Compilar para Web
+        run: flutter build web --release --base-href "/chispa_horro/"
+
+      # 6. Preparar la carpeta construida para su publicación
+      - name: Configurar Páginas de GitHub
+        uses: actions/configure-pages@v4
+
+      # 7. Subir el resultado final de la compilación a los servidores de GitHub
+      - name: Subir artefacto web
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: build/web
+
+      # 8. Poner la aplicación en producción en internet gratis
+      - name: Desplegar en GitHub Pages
+        uses: actions/deploy-pages@v4
