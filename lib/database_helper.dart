@@ -16,12 +16,12 @@ class DatabaseHelper {
     return _database!;
   }
 
-  Future<Database> _initDatabase() async {
+    Future<Database> _initDatabase() async {
     String pathString;
 
-    // 🚀 INTERCEPTOR WEB: Si corre en navegador, evitamos pedir carpetas internas del celular
     if (kIsWeb) {
-      pathString = 'chispahorro.db'; // Mapea directo al IndexedDB del navegador de forma segura
+      // 🚀 SOLUCIÓN: Usamos un identificador sin carpetas para forzar al Service Worker web
+      pathString = 'chispahorro_web.db'; 
     } else {
       final dbPath = await getDatabasesPath();
       pathString = join(dbPath, 'chispahorro.db');
@@ -29,16 +29,16 @@ class DatabaseHelper {
 
     final db = await openDatabase(
       pathString,
-      version: 6, // 🚀 EVOLUCIÓN A VERSIÓN 6: Incorporación nativa de real_price para congelar cálculos
+      version: 6,
       onCreate: _onCreate,
       onConfigure: _onConfigure,
       onUpgrade: _onUpgrade,
     );
 
-    // Ejecuta de forma automática la poda de datos antiguos al levantar la conexión
     await purgeOldHistory(db);
     return db;
   }
+
 
   Future<void> _onConfigure(Database db) async {
     // 🚀 COMPATIBILIDAD WEB: PRAGMA foreign_keys solo se ejecuta en entornos móviles,
