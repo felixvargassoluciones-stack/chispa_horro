@@ -1,0 +1,52 @@
+name: chispa_horro
+description: "A new Flutter project."
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.12.2
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # --- INTERFAZ DE USUARIO ---
+  cupertino_icons: ^1.0.8
+
+  # --- ARQUITECTURA Y GESTIÓN DE ESTADO (RAM 0ms) ---
+  flutter_riverpod: ^3.4.2
+  riverpod_annotation: ^4.0.6
+
+  # --- PERSISTENCIA LOCAL-FIRST PURE (SQLITE) ---
+  sqflite: ^2.4.3
+  path: ^1.9.1
+  intl: ^0.20.3
+
+  # --- CAPTURA Y ENTORNO ---
+  mobile_scanner: ^7.4.0
+  geolocator: ^14.0.3
+  pdf: ^3.13.0
+  share_plus: ^13.3.0
+  path_provider: ^2.1.6
+
+
+
+  # --- INFRAESTRUCTURA CLOUD & MIGRACIÓN ---
+  shared_preferences: ^2.5.5
+  supabase_flutter: ^2.8.1
+
+  url_launcher: ^6.3.0     # 🚀 AÑADE ESTA LÍNEA EXACTA
+  http: ^1.2.1 
+
+
+   
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
