@@ -25,7 +25,7 @@ dependencies:
 
   # --- CAPTURA Y ENTORNO ---
   mobile_scanner: ^7.4.0
-  geolocator: ^14.0.3
+  
   pdf: ^3.13.0
   share_plus: ^13.3.0
   path_provider: ^2.1.6
@@ -34,11 +34,14 @@ dependencies:
 
   # --- INFRAESTRUCTURA CLOUD & MIGRACIÓN ---
   shared_preferences: ^2.5.5
-  supabase_flutter: ^2.8.1
+  
 
   url_launcher: ^6.3.0     # 🚀 AÑADE ESTA LÍNEA EXACTA
   http: ^1.2.1 
 
+  sqflite_common_ffi_web: ^0.4.3
+
+    
 
    
 
