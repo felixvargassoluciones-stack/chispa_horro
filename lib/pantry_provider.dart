@@ -188,18 +188,15 @@ class PantryNotifier extends AsyncNotifier<PantryState> {
     return clean;
   }
 
-  Future<PantryState> _fetchItemsFromLocalDatabase() async {
+    Future<PantryState> _fetchItemsFromLocalDatabase() async {
     final db = await _getDatabase();
 
-    final List<dynamic> results = await Future.wait([
-      db.query('pantry_items'),
-      db.query('purchase_history', orderBy: 'purchase_date DESC, id DESC'), 
-      db.query('stores_catalog', orderBy: 'name ASC'), 
-    ]);
+    // 🚀 CORRECCIÓN WEB: Ejecutamos las consultas de forma secuencial con await independiente.
+    // Esto evita el Deadlock y el error 'unsupported result null' en navegadores.
+    final List<Map<String, dynamic>> productsResponse = await db.query('pantry_items');
+    final List<Map<String, dynamic>> historyResponse = await db.query('purchase_history', orderBy: 'purchase_date DESC, id DESC');
+    final List<Map<String, dynamic>> savedStoresResponse = await db.query('stores_catalog', orderBy: 'name ASC');
 
-    final List<Map<String, dynamic>> productsResponse = List<Map<String, dynamic>>.from(results[0]);
-    final List<Map<String, dynamic>> historyResponse = List<Map<String, dynamic>>.from(results[1]);
-    final List<Map<String, dynamic>> savedStoresResponse = List<Map<String, dynamic>>.from(results[2]);
     final Map<String, List<DateTime>> purchaseDatesGrouped = {};
     final Map<String, Map<String, dynamic>> lastPurchaseMeta = {};
     
@@ -237,6 +234,7 @@ class PantryNotifier extends AsyncNotifier<PantryState> {
         }
       }
     }
+
     final Map<String, double> computedLifespans = {};
     final Map<String, Map<String, dynamic>> pivotesParaPredictivo = {};
 
