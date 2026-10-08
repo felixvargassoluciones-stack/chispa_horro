@@ -23,7 +23,10 @@ class _CommunityChatScreenState extends ConsumerState<CommunityChatScreen> {
     const String tuNumeroWhatsApp = '527201494833';
     const String mensajeTexto = 'Hola Ing. Félix Vargas. Necesito soporte técnico o información sobre la aplicación ChispaHorro⚡';
     
-    final String urlTexto = "whatsapp://send?phone=$tuNumeroWhatsApp&text=${Uri.encodeComponent(mensajeTexto)}";
+    //final String urlTexto = "whatsapp://send?phone=$tuNumeroWhatsApp&text=${Uri.encodeComponent(mensajeTexto)}";
+           // 🚀 SOLUCIÓN UNIVERSAL WEB: El esquema https://wa.me es 100% compatible con PC (WhatsApp Web) y celulares
+    final String urlTexto = "https://wa.me$tuNumeroWhatsApp?text=${Uri.encodeComponent(mensajeTexto)}";
+
 
     try {
       await url_launcher.launchUrl(Uri.parse(urlTexto), mode: url_launcher.LaunchMode.externalApplication);
