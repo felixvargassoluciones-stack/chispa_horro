@@ -28,7 +28,7 @@ class _CommunityChatScreenState extends ConsumerState<CommunityChatScreen> {
     final bool esMonitorPC = MediaQuery.of(context).size.width > 900;
 
     final String urlTexto = esMonitorPC
-        ? "https://wa.me{Uri.encodeComponent(mensajeTexto)}" // 💻 PC: Redirección limpia a WhatsApp Web
+        ? "https://wa.me${Uri.encodeComponent(mensajeTexto)}" // 💻 PC: Redirección limpia a WhatsApp Web
         : "whatsapp://send?phone=$tuNumeroWhatsApp&text=${Uri.encodeComponent(mensajeTexto)}"; // 📱 Móvil: Disparo directo a la App nativa
 
    
