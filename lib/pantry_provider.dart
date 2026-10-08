@@ -190,19 +190,24 @@ class PantryNotifier extends AsyncNotifier<PantryState> {
     ));
   }
 
-  Future<void> removeStore(String id) async {
+    Future<void> removeStore(String id) async {
     final currentState = state.value;
     if (currentState == null) return;
 
-    final dbHelper = DatabaseHelper();
-    await dbHelper.deleteStore(id);
-    final updatedStores = await dbHelper.getAllStores();
+    // 🚀 ADAPTACIÓN WEB NATIVA: Filtramos la lista en la RAM excluyendo la tienda eliminada
+    final updatedStores = currentState.savedStores.where((store) => store['id'] != id).toList();
 
-    state = AsyncData(currentState.copyWith(
+    // Empaquetamos el nuevo estado redirigiendo el pasillo activo a 'Casa' si se borró la tienda actual
+    final newState = currentState.copyWith(
       currentSupermarketId: currentState.currentSupermarketId == id ? 'Casa' : currentState.currentSupermarketId,
       savedStores: updatedStores,
-    ));
+    );
+
+    // Persistimos los datos de forma inmediata en el almacenamiento local del navegador
+    await _saveStateToLocalStorage(newState);
+    state = AsyncData(newState);
   }
+
   String _removeAccents(String text) {
     var withAccents = 'áéíóúÁÉÍÓÚüÜíí';
     var withoutAccents = 'aeiouAEIOUuUii';
@@ -1094,9 +1099,11 @@ class PantryNotifier extends AsyncNotifier<PantryState> {
             await procesarBunkerYVaciarCarrito(purchasedItems);
           }
         }
-      } else {
-        await procesarBunkerYVaciarCarrito(purchasedItems);
+            } else {
+        // 🚀 ADAPTACIÓN WEB NATIVA: Retorno seguro sin duplicación cíclica
+        return;
       }
+
     } catch (e) {
       debugPrint('🚨 Error al procesar el reporte: $e');
     }
