@@ -740,10 +740,10 @@ class PantryNotifier extends AsyncNotifier<PantryState> {
       
       final String itemKey = 'NAME_${cleanName}_CAT:${item.category}_QTY:${item.quantity}_UNT:${item.unit}_STR:${tiendaActual}_DATE:${fechaSelloLlave}_PRC:${precioFinalCobrado}_ID:$microSegundoRAM';
       
-      updatedHistoryList.insert(0, {
+            updatedHistoryList.insert(0, {
         'compositeKey': itemKey,
         'price': precioFinalCobrado,
-        'date': momentoCompra,
+        'date': momentoCompra.toIso8601String(), // 🔥 SOLUCIÓN: Almacenamiento en texto puro para blindaje web
       });
 
       final String baseKey = 'NAME_${cleanName}_${item.category.trim()}';
