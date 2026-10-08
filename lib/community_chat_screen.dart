@@ -24,8 +24,14 @@ class _CommunityChatScreenState extends ConsumerState<CommunityChatScreen> {
     const String mensajeTexto = 'Hola Ing. Félix Vargas. Necesito soporte técnico o información sobre la aplicación ChispaHorro⚡';
     
     //final String urlTexto = "whatsapp://send?phone=$tuNumeroWhatsApp&text=${Uri.encodeComponent(mensajeTexto)}";
-           // 🚀 SOLUCIÓN UNIVERSAL WEB: El esquema https://wa.me es 100% compatible con PC (WhatsApp Web) y celulares
-    final String urlTexto = "https://wa.me$tuNumeroWhatsApp?text=${Uri.encodeComponent(mensajeTexto)}";
+        // 🧠 DETECTOR DE ENTORNO: Evaluamos el ancho de la pantalla para decidir el canal de comunicación ideal
+    final bool esMonitorPC = MediaQuery.of(context).size.width > 900;
+
+    final String urlTexto = esMonitorPC
+        ? "https://wa.me{Uri.encodeComponent(mensajeTexto)}" // 💻 PC: Redirección limpia a WhatsApp Web
+        : "whatsapp://send?phone=$tuNumeroWhatsApp&text=${Uri.encodeComponent(mensajeTexto)}"; // 📱 Móvil: Disparo directo a la App nativa
+
+   
 
 
     try {

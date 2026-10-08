@@ -1023,7 +1023,16 @@ final pantryState = asyncPantry.requireValue;
     const String tuNumeroWhatsApp = '527201494833';
     const String mensajeTexto = 'Hola Ing. Félix Vargas. Necesito soporte técnico o información sobre la activación Premium de ChispaHorro⚡';
     
-    final String urlTexto = "whatsapp://send?phone=$tuNumeroWhatsApp&text=${Uri.encodeComponent(mensajeTexto)}";
+    //final String urlTexto = "whatsapp://send?phone=$tuNumeroWhatsApp&text=${Uri.encodeComponent(mensajeTexto)}";
+        // 🧠 DETECTOR DE ENTORNO: Evaluamos el ancho de la pantalla para decidir el canal de comunicación ideal
+    final bool esMonitorPC = MediaQuery.of(context).size.width > 900;
+
+    final String urlTexto = esMonitorPC
+        ? "https://wa.me{Uri.encodeComponent(mensajeTexto)}" // 💻 PC: Redirección limpia a WhatsApp Web
+        : "whatsapp://send?phone=$tuNumeroWhatsApp&text=${Uri.encodeComponent(mensajeTexto)}"; // 📱 Móvil: Disparo directo a la App nativa
+
+    
+
 
     try {
       await url_launcher.launchUrl(Uri.parse(urlTexto), mode: url_launcher.LaunchMode.externalApplication);
