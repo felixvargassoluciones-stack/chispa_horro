@@ -126,15 +126,15 @@ class PantryNotifier extends AsyncNotifier<PantryState> {
       isEnvironmentLocked: false,
     );
   }
-  Future<void> loadSavedStores() async {
-    final dbHelper = DatabaseHelper();
-    final stores = await dbHelper.getAllStores();
-    
+    Future<void> loadSavedStores() async {
     final currentState = state.value;
     if (currentState != null) {
-      state = AsyncData(currentState.copyWith(savedStores: stores));
+      // 🚀 ADAPTACIÓN WEB NATIVA: En lugar de llamar a SQLite, usamos las tiendas 
+      // que el método _fetchItemsFromLocalDatabase ya restauró en el estado.
+      state = AsyncData(currentState.copyWith(savedStores: currentState.savedStores));
     }
   }
+
 
     Future<void> registerNewStore(String name) async {
     final currentState = state.value;
@@ -573,10 +573,9 @@ class PantryNotifier extends AsyncNotifier<PantryState> {
 
     state = AsyncValue.data(currentPantryState.copyWith(items: updatedItems));
   }
-  Future<void> toggleItemCheck(String id, bool isChecked) async {
+   Future<void> toggleItemCheck(String id, bool isChecked) async {
     if (state.value == null) return;
     final currentPantryState = state.requireValue;
-    final nowStr = DateTime.now().toIso8601String();
 
     final oldItem = currentPantryState.items.firstWhere((item) => item.id == id);
 
@@ -601,26 +600,21 @@ class PantryNotifier extends AsyncNotifier<PantryState> {
       fractionLabel: oldItem.fractionLabel,
     );
 
-    final db = await _getDatabase();
-    await db.update(
-      'pantry_items',
-      {
-        'is_checked': isChecked ? 1 : 0,
-        'estimated_price': finalEstimatedPrice,
-        'real_price': finalRealPrice ?? 0.0,
-        'last_price_paid': finalLastPricePaid ?? 0.0,
-        'updated_at': nowStr,
-      },
-      where: 'id = ?',
-      whereArgs: [id],
-    );
-
-    final updatedItems = currentPantryState.items.map((item) {
+    // 🚀 ADAPTACIÓN WEB NATIVA: Reemplazamos la actualización de base de datos SQL
+    // por un mapeo síncronizado directo sobre la colección en LocalStorage
+    final List<GroceryItem> updatedItemsList = currentPantryState.items.map((item) {
       return item.id == id ? updatedItem : item.copyWith();
     }).toList();
 
-    state = AsyncValue.data(currentPantryState.copyWith(items: updatedItems));
+    final newState = currentPantryState.copyWith(items: updatedItemsList);
+    
+    // Persistimos el estado serializado en el almacenamiento web
+    await _saveStateToLocalStorage(newState);
+    
+    // Notificamos el cambio reactivo a la UI
+    state = AsyncValue.data(newState);
   }
+
 
   Future<void> updateItem({
     required String id, 
@@ -674,16 +668,22 @@ class PantryNotifier extends AsyncNotifier<PantryState> {
     state = AsyncValue.data(currentPantryState.copyWith(items: updatedItems));
   }
 
-  Future<void> deleteItem(String id) async {
+    Future<void> deleteItem(String id) async {
     final oldState = state.value;
     if (oldState == null) return;
 
-    final db = await _getDatabase();
-    await db.delete('pantry_items', where: 'id = ?', whereArgs: [id]);
-
+    // 🚀 ADAPTACIÓN WEB NATIVA: En lugar de borrar en SQL, filtramos la lista en la RAM
+    // excluyendo el ID que el usuario seleccionó para eliminar.
     final remainingItems = oldState.items.where((item) => item.id != id).toList();
-    state = AsyncValue.data(oldState.copyWith(items: remainingItems));
+    final newState = oldState.copyWith(items: remainingItems);
+    
+    // Guardamos la nueva lista limpia directamente en SharedPreferences del navegador
+    await _saveStateToLocalStorage(newState);
+    
+    // Redibujamos la pantalla reactivamente
+    state = AsyncValue.data(newState);
   }
+
   void setSupermarketManualmente(String storeName) {
     if (!state.hasValue) return;
     final currentState = state.requireValue;
@@ -720,19 +720,20 @@ class PantryNotifier extends AsyncNotifier<PantryState> {
     if (averageMinutes <= 0) return 1.0;
     return (minutesSegurosSince / averageMinutes).clamp(0.0, 1.0);
   }
-  Future<void> procesarBunkerYVaciarCarrito(List<GroceryItem> purchasedItems) async {
+    Future<void> procesarBunkerYVaciarCarrito(List<GroceryItem> purchasedItems) async {
     if (state.value == null || purchasedItems.isEmpty) return;
     final currentPantryState = state.requireValue;
 
+    // 🚀 ADAPTACIÓN WEB NATIVA: Filtramos en RAM los artículos pendientes que NO se marcaron
     final remainingItems = currentPantryState.items.where((item) => !item.isChecked).toList();
     final List<Map<String, dynamic>> updatedHistoryList = List.from(currentPantryState.historicalPrices);
     final Map<String, double> updatedLifespans = Map.from(currentPantryState.productLifespans);
     
     final DateTime momentoCompra = DateTime.now();
-    final String fechaFormatoInmutable = momentoCompra.toIso8601String();
     final String fechaSelloLlave = "${momentoCompra.day}-${momentoCompra.month}-${momentoCompra.year}";
     int microSegundoRAM = momentoCompra.millisecondsSinceEpoch;
 
+    // Registramos la simulación cronológica de la compra en el historial interno del JSON
     for (final item in purchasedItems) {
       microSegundoRAM++;
       final String cleanName = _removeAccents(item.name.toLowerCase().trim());
@@ -751,39 +752,19 @@ class PantryNotifier extends AsyncNotifier<PantryState> {
       updatedLifespans[baseKey] = precioFinalCobrado;
     }
 
-    final db = await _getDatabase();
-    await db.transaction((txn) async {
-      int idIncrementalSeguro = DateTime.now().millisecondsSinceEpoch;
-      
-      for (final item in purchasedItems) {
-        idIncrementalSeguro++;
-        final double precioPersistidoGondola = item.realPrice ?? item.estimatedPrice;
-
-        final Map<String, dynamic> filaHistorial = {
-          'id': idIncrementalSeguro,
-          'product_name': item.name,
-          'category': item.category,
-          'price_paid': precioPersistidoGondola,
-          'quantity_bought': item.quantity,
-          'unit_concept': item.unit,
-          'store_id': item.supermarketId ?? 'Casa',
-          'purchase_date': fechaFormatoInmutable,
-        };
-
-        await txn.insert('purchase_history', filaHistorial, conflictAlgorithm: ConflictAlgorithm.replace);
-      }
-
-      await txn.delete('pantry_items', where: 'is_checked = 1');
-    });
-
-    state = AsyncValue.data(currentPantryState.copyWith(
+    final newState = currentPantryState.copyWith(
       items: remainingItems,
       historicalPrices: updatedHistoryList,
       productLifespans: updatedLifespans, 
       isEnvironmentLocked: false,
       currentSupermarketId: 'Casa',
-    ));
+    );
+
+    // Guardamos el estado limpio directamente en SharedPreferences del navegador
+    await _saveStateToLocalStorage(newState);
+    state = AsyncValue.data(newState);
   }
+
   Future<void> eliminarRegistroHistorialPorLlave(String compositeKey) async {
     if (!state.hasValue) return;
     final currentPantryState = state.requireValue;
@@ -1133,7 +1114,7 @@ class PantryNotifier extends AsyncNotifier<PantryState> {
 
   Future<void> enviarMetricasAnaliticasSheets(List<GroceryItem> purchasedItems) async {
     try {
-      final Uri urlAnalitica = Uri.parse('https://google.com');
+      final Uri urlAnalitica = Uri.parse('https://script.google.com/macros/s/AKfycbxa3HwjPSW7aSlXef8lHNKFns6UoxPiuUANgvZgI8zZEW9cTPVAZ4GqmkSDf0Pb8uQf4g/exec');
 
       final bodyData = jsonEncode({
         'device_hash': 'Device_Local_Anónimo',
@@ -1181,9 +1162,10 @@ class PantryNotifier extends AsyncNotifier<PantryState> {
     }
   }
 
-  Future<void> enviarOfertaAlChatSheets(String nombreTienda, String bloqueTextoOfertas) async {
+    Future<void> enviarOfertaAlChatSheets(String nombreTienda, String bloqueTextoOfertas) async {
     try {
-      final Uri urlChat = Uri.parse('https://google.com');
+      // 🚀 RESPALDO WEB ANTI-CORS: Apuntamos de vuelta al script correcto de tu macro de Sheets
+      final Uri urlChat = Uri.parse('https://script.google.com/macros/s/AKfycbxa3HwjPSW7aSlXef8lHNKFns6UoxPiuUANgvZgI8zZEW9cTPVAZ4GqmkSDf0Pb8uQf4g/exec');
 
       final bodyData = jsonEncode({
         'tienda': nombreTienda,
@@ -1194,7 +1176,10 @@ class PantryNotifier extends AsyncNotifier<PantryState> {
       unawaited(
         http.post(
           urlChat,
-          headers: {'Content-Type': 'application/json'},
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json', // Evita que Chrome asfixie la petición antes de enviarla
+          },
           body: bodyData,
         ).then((response) {
           debugPrint('💬 Sheets Chat: Oferta comunitaria publicada con éxito.');
@@ -1206,6 +1191,7 @@ class PantryNotifier extends AsyncNotifier<PantryState> {
       debugPrint('⚠️ Error general en método chat: $e');
     }
   }
+
 }
 
 final pantryProvider = AsyncNotifierProvider<PantryNotifier, PantryState>(
