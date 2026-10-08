@@ -1127,7 +1127,7 @@ class PantryNotifier extends AsyncNotifier<PantryState> {
 
       Future<void> enviarMetricasAnaliticasSheets(List<GroceryItem> purchasedItems) async {
     try {
-      final Uri urlAnalitica = Uri.parse('https://script.google.com/macros/s/AKfycbzbhGiYDMwPaCE-Us0ZeO4i48Yl2VYX_tCVoqOZ_ocUeLxXmj99-WePUKgL0-eyQDSeIA/exec');
+      final Uri urlAnalitica = Uri.parse('https://script.google.com/macros/s/AKfycbzUY6a0frR_6z5oEoQ5ccDzvmyd-0YpBIn3Up8BZroDyCg66avhzTz-GCNox7RkT1PRsQ/exec');
 
       final itemsMapped = purchasedItems.map((item) {
         String nombreTiendaMapeado = 'Casa';
@@ -1189,7 +1189,7 @@ class PantryNotifier extends AsyncNotifier<PantryState> {
     Future<void> enviarOfertaAlChatSheets(String nombreTienda, String bloqueTextoOfertas) async {
     try {
       // 🚀 RESPALDO WEB ANTI-CORS: Apuntamos de vuelta al script correcto de tu macro de Sheets
-      final Uri urlChat = Uri.parse('https://script.google.com/macros/s/AKfycbzbhGiYDMwPaCE-Us0ZeO4i48Yl2VYX_tCVoqOZ_ocUeLxXmj99-WePUKgL0-eyQDSeIA/exec');
+      final Uri urlChat = Uri.parse('https://script.google.com/macros/s/AKfycbzUY6a0frR_6z5oEoQ5ccDzvmyd-0YpBIn3Up8BZroDyCg66avhzTz-GCNox7RkT1PRsQ/exec');
 
       // 🚀 SOLUCIÓN WEB NATIVA: Codificación clásica de formulario plano para saltar las restricciones CORS de Chrome
       unawaited(
@@ -1214,6 +1214,44 @@ class PantryNotifier extends AsyncNotifier<PantryState> {
     }
   }
 
+     // 🔒 REGISTRO DE LICENCIAS MANUAL: Envía el usuario y el hash para validación administrativa
+  Future<bool> enviarSolicitudPremium(String identificadorUsuario) async {
+    if (identificadorUsuario.trim().isEmpty) return false;
+
+    try {
+      final Uri urlRegistro = Uri.parse(
+        'https://script.google.com/macros/s/AKfycbzUY6a0frR_6z5oEoQ5ccDzvmyd-0YpBIn3Up8BZroDyCg66avhzTz-GCNox7RkT1PRsQ/exec'
+      );
+
+      // Desplegamos el paquete usando codificación clásica de formulario tradicional (CORS Proof)
+      final response = await http.post(
+        urlRegistro,
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: {
+          'accion': 'solicitar_premium',
+          'usuario': identificadorUsuario.trim(),
+          'device_hash': 'Device_Local_Anónimo',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> resData = jsonDecode(response.body);
+        if (resData['status'] == 'success') {
+          debugPrint('📥 SOLICITUD DE LICENCIA: Registrada con éxito en la nube.');
+          return true;
+        }
+      }
+      return false;
+    } catch (e) {
+      debugPrint('⚠️ Error de red al tramitar solicitud de licencia: $e');
+      return false;
+    }
+  }
+
+
+
     // 🛰️ MOTOR DE VERIFICACIÓN VIP: Consulta en vivo el estatus en la macro de Google
   Future<void> verificarEstatusPremiumServidor() async {
     final currentState = state.value;
@@ -1222,14 +1260,15 @@ class PantryNotifier extends AsyncNotifier<PantryState> {
     try {
       // 🚀 Apuntamos a tu macro web con los parámetros de la función doGet corregida
       final Uri urlValidacion = Uri.parse(
-        'https://script.google.com/macros/s/AKfycbzbhGiYDMwPaCE-Us0ZeO4i48Yl2VYX_tCVoqOZ_ocUeLxXmj99-WePUKgL0-eyQDSeIA/exec'
+        'https://script.google.com/macros/s/AKfycbzUY6a0frR_6z5oEoQ5ccDzvmyd-0YpBIn3Up8BZroDyCg66avhzTz-GCNox7RkT1PRsQ/exec'
       );
 
       final response = await http.get(urlValidacion);
       
       if (response.statusCode == 200) {
         final Map<String, dynamic> data = jsonDecode(response.body);
-        final bool esPremiumReal = data['is_premium'] ?? false;
+        final dynamic rawPremium = data['is_premium'];
+        final bool esPremiumReal = rawPremium == true || rawPremium.toString().toLowerCase() == 'true';
 
         // Sincronizamos la RAM de Flutter de forma reactiva con el resultado de la nube
         state = AsyncData(currentState.copyWith(isPremium: esPremiumReal));

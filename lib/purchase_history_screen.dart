@@ -78,103 +78,76 @@ final pantryState = asyncPantry.requireValue;
        title: const Text('📋 Historial', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 26)),
         backgroundColor: Colors.orange.shade100,
         centerTitle: false,
-        actions: [
-           // 📄 NUEVO: Botón del PDF con efecto de alto relieve (Sintaxis Reparada Quirúrgicamente)
+               actions: [
+          // 🔒 BOTÓN 1: PDF con indicador de candado condicional
           Padding(
-            padding: const EdgeInsets.only(top: 8.0, bottom: 8.0, right: 20.0),
+            padding: const EdgeInsets.only(top: 8.0, bottom: 8.0, right: 10.0),
             child: Container(
               decoration: BoxDecoration(
-                color: const Color.fromARGB(255, 255, 255, 255),
+                color: Colors.white,
                 borderRadius: BorderRadius.circular(10),
-                boxShadow: const [
-                  BoxShadow(
-                    color: Colors.black26,
-                    blurRadius: 4,
-                    offset: Offset(0, 3),
+                boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2))],
+              ),
+              child: Stack(
+                alignment: Alignment.topRight,
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.picture_as_pdf_rounded, color: Color(0xFF0D47A1), size: 24),
+                    tooltip: 'Exportar historial',
+                    onPressed: () {
+                      if (pantryState.isPremium) {
+                        final datosContables = _obtenerHistorialContableFiltrado(historialActual, pantryState.savedStores);
+                        _exportarHistorialFiltradoPDF(datosContables['comprasAgrupadas'] as Map<String, List<Map<String, dynamic>>>, datosContables['granTotalGeneral'] as double);
+                      } else {
+                        _mostrarAlertaPremiumDialog(context);
+                      }
+                    },
                   ),
-                  BoxShadow(
-                    color: Colors.white54,
-                    blurRadius: 1,
-                    offset: Offset(0, -1),
-                  ),
+                  if (!pantryState.isPremium)
+                    const Padding(
+                      padding: EdgeInsets.all(4.0),
+                      child: Icon(Icons.lock_rounded, color: Colors.amber, size: 12),
+                    ),
                 ],
               ),
-                            child: IconButton(
-                // 🔒 INTERCEPTOR VIP: Cambia el icono a un candado si el usuario no es de pago
-                icon: Icon(
-                  pantryState.isPremium ? Icons.picture_as_pdf_rounded : Icons.lock_rounded, 
-                  color: pantryState.isPremium ? const Color(0xFF0D47A1) : Colors.amber.shade900, 
-                  size: 24
-                ),
-                tooltip: pantryState.isPremium ? 'Exportar historial filtrado' : 'Función Premium',
-                onPressed: () {
-                  if (pantryState.isPremium) {
-                    final datosContables = _obtenerHistorialContableFiltrado(
-                      historialActual, 
-                      pantryState.savedStores,
-                    );
-                    
-                    _exportarHistorialFiltradoPDF(
-                      datosContables['comprasAgrupadas'] as Map<String, List<Map<String, dynamic>>>, 
-                      datosContables['granTotalGeneral'] as double,
-                    );
-                  } else {
-                    _mostrarAlertaPremiumDialog(context);
-                  }
-                },
-              ),
-
             ),
           ),
-          // Botón en la cabecera para borrar todo manualmente si el usuario desea liberar espacio
-                    if (historialActual.isNotEmpty)
+          
+          // 🔒 BOTÓN 2: Vaciar Historial Completo (Basurero) protegido bajo el entorno Premium
+          if (historialActual.isNotEmpty)
             Padding(
               padding: const EdgeInsets.only(top: 8.0, bottom: 8.0, right: 20.0),
               child: Container(
                 decoration: BoxDecoration(
-                  color: Colors.white, // Fondo del contenedor para el relieve
+                  color: Colors.white,
                   borderRadius: BorderRadius.circular(10),
-                  boxShadow: const [
-                    BoxShadow(
-                      color: Colors.black12,
-                      blurRadius: 4,
-                      offset: Offset(0, 2), // Sombra ligera idéntica a los otros botones
+                  boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2))],
+                ),
+                child: Stack(
+                  alignment: Alignment.topRight,
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.delete_sweep_rounded, color: Color.fromARGB(255, 227, 3, 7), size: 24),
+                      tooltip: 'Vaciar base de datos',
+                      onPressed: () {
+                        if (pantryState.isPremium) {
+                          // Abre tu cuadro de diálogo original para borrar todo
+                          _mostrarConfirmarBorradoDialog(context, pantryNotifier);
+                        } else {
+                          _mostrarAlertaPremiumDialog(context);
+                        }
+                      },
                     ),
+                    if (!pantryState.isPremium)
+                      const Padding(
+                        padding: EdgeInsets.all(4.0),
+                        child: Icon(Icons.lock_rounded, color: Colors.amber, size: 12),
+                      ),
                   ],
                 ),
-                child: IconButton(
-                  icon: const Icon(Icons.delete_sweep_rounded, color: Color.fromARGB(255, 227, 3, 7), size: 24), // Ajustado a size 24 para centrarlo en el cuadro
-                  tooltip: 'Vaciar base de datos',
-                  onPressed: () {
-                    showDialog(
-
-                  context: context,
-                  builder: (context) => AlertDialog(
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                    title: const Text('¿Vaciar todo el historial?'),
-                    content: const Text('Esta acción liberará la memoria local de la IA borrando todos tus registros de precios anteriores. No se puede deshacer.'),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.pop(context),
-                        child: const Text('Cancelar', style: TextStyle(color: Colors.black54)),
-                      ),
-                      ElevatedButton(
-                        style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-                                                onPressed: () {
-                          pantryNotifier.limpiarHistorialCompleto();
-                          Navigator.pop(context);
-                        },
-
-                        child: const Text('Vaciar memoria', style: TextStyle(color: Colors.white)),
-                      ),
-                    ],
-                  ),
-                );
-              },
+              ),
             ),
-                      ), // Cierra Container
-            ), // Cierra Padding
-        ], // Cierra actions
+        ],
 
       ),
       body: Column(
@@ -875,8 +848,8 @@ final pantryState = asyncPantry.requireValue;
   }
 
 
-  // 🔒 MODAL INFORMATIVO VIP: Avisa al usuario que la función es de pago
-  void _mostrarAlertaPremiumDialog(BuildContext context) {
+    // 🗑️ DIÁLOGO DE LIMPIEZA: Confirma antes de vaciar el historial completo en SharedPreferences
+  void _mostrarConfirmarBorradoDialog(BuildContext context, PantryNotifier notifier) {
     showDialog(
       context: context,
       builder: (BuildContext dialogContext) {
@@ -884,21 +857,28 @@ final pantryState = asyncPantry.requireValue;
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           title: const Row(
             children: [
-              Icon(Icons.lock_rounded, color: Colors.amber),
+              Icon(Icons.warning_amber_rounded, color: Colors.red),
               SizedBox(width: 8),
-              Text('Función Premium', style: TextStyle(fontWeight: FontWeight.bold)),
+              Text('¿Vaciar Historial?', style: TextStyle(fontWeight: FontWeight.bold)),
             ],
           ),
           content: const Text(
-            'La exportación de reportes contables en formato PDF es una característica exclusiva de la versión Premium.\n\nPara activarla, ponte en contacto con nuestro equipo de atención al cliente desde el canal de soporte en la pantalla principal.',
-            style: TextStyle(fontSize: 14, height: 1.4),
+            'Esta acción eliminará todos los registros de compras guardados de forma permanente. ¿Deseas continuar?',
+            style: TextStyle(fontSize: 14),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Cancelar', style: TextStyle(color: Colors.grey)),
+            ),
+            TextButton(
+              onPressed: () {
+                notifier.limpiarHistorialCompleto(); // Llama al borrador del provider
+                Navigator.pop(dialogContext);
+              },
               child: const Text(
-                'Entendido',
-                style: TextStyle(color: Color(0xFF0D47A1), fontWeight: FontWeight.bold),
+                'Eliminar Todo',
+                style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
               ),
             ),
           ],
@@ -906,6 +886,117 @@ final pantryState = asyncPantry.requireValue;
       },
     );
   }
+
+
+
+
+    // 🔒 FORMULARIO INTERACTIVO VIP: Captura el nombre/correo y despacha la solicitud a Google Sheets
+  void _mostrarAlertaPremiumDialog(BuildContext context) {
+    final TextEditingController usuarioController = TextEditingController();
+    bool cargandoEnvio = false;
+
+    showDialog(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setStateModal) {
+            return AlertDialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              title: const Row(
+                children: [
+                  Icon(Icons.lock_rounded, color: Colors.amber),
+                  SizedBox(width: 8),
+                  Text('Activar Versión Premium', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+                ],
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Esta característica es exclusiva de la versión Premium. Ingresa tu Nombre o Correo para generar tu solicitud de activación:',
+                    style: TextStyle(fontSize: 13, height: 1.4, color: Colors.black87),
+                  ),
+                  const SizedBox(height: 14),
+                  TextField(
+                    controller: usuarioController,
+                    enabled: !cargandoEnvio,
+                    decoration: InputDecoration(
+                      labelText: 'Nombre o Correo Electrónico',
+                      labelStyle: const TextStyle(fontSize: 13),
+                      prefixIcon: const Icon(Icons.person_outline_rounded, size: 20),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                      contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+                    ),
+                    style: const TextStyle(fontSize: 14),
+                  ),
+                  const SizedBox(height: 10),
+                  const Text(
+                    '🔔 Una vez enviado, ponte en contacto con atención al cliente desde el chat para validar tu pago y liberar tu licencia manualmente.',
+                    style: TextStyle(fontSize: 11, color: Colors.grey, height: 1.3),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: cargandoEnvio ? null : () => Navigator.pop(dialogContext),
+                  child: const Text('Cancelar', style: TextStyle(color: Colors.grey)),
+                ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF0D47A1),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                  onPressed: cargandoEnvio 
+                      ? null 
+                      : () async {
+                          final String inputText = usuarioController.text.trim();
+                          if (inputText.isEmpty) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('⚠️ Por favor escribe tu nombre o correo.')),
+                            );
+                            return;
+                          }
+
+                          setStateModal(() => cargandoEnvio = true);
+
+                          // Despachamos la solicitud directo al proveedor para que la inserte en el Excel
+                         
+                          final bool exito = await ref.read(pantryProvider.notifier).enviarSolicitudPremium(inputText);
+
+                          // 🛡️ ESCUDO ASÍNCRONO: Verificamos si el modal sigue vivo antes de redibujar o usar el contexto
+                          if (!context.mounted) return;
+
+                          setStateModal(() => cargandoEnvio = false);
+
+                          if (exito) {
+                            Navigator.pop(dialogContext);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('📥 ¡Solicitud registrada! Pasa al chat de soporte para reportar tu activación.'),
+                                backgroundColor: Colors.green,
+                              ),
+                            );
+                          } else {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('⚠️ Error de red. Inténtalo de nuevo más tarde.')),
+                            );
+                          }
+
+                        },
+                  child: cargandoEnvio
+                      ? const SizedBox(height: 16, width: 16, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                      : const Text('Solicitar Licencia', style: TextStyle(fontWeight: FontWeight.bold)),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
 
 
 }
