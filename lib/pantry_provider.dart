@@ -713,8 +713,11 @@ class PantryNotifier extends AsyncNotifier<PantryState> {
 
     // 🚀 ADAPTACIÓN WEB NATIVA: Filtramos en RAM los artículos pendientes que NO se marcaron
     final remainingItems = currentPantryState.items.where((item) => !item.isChecked).toList();
-    final List<Map<String, dynamic>> updatedHistoryList = List.from(currentPantryState.historicalPrices);
-    final Map<String, double> updatedLifespans = Map.from(currentPantryState.productLifespans);
+        // 🚀 CORRECCIÓN DE INMUTABILIDAD WEB: Duplicamos de forma elástica las colecciones base en la RAM.
+    // Esto evita el 'Uncaught Error' por objetos congelados y permite que el carrito se vacíe al instante.
+    final List<Map<String, dynamic>> updatedHistoryList = [...currentPantryState.historicalPrices];
+    final Map<String, double> updatedLifespans = {...currentPantryState.productLifespans};
+
     
     final DateTime momentoCompra = DateTime.now();
     final String fechaSelloLlave = "${momentoCompra.day}-${momentoCompra.month}-${momentoCompra.year}";
