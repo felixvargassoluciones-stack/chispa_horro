@@ -99,21 +99,31 @@ final pantryState = asyncPantry.requireValue;
                   ),
                 ],
               ),
-              child: IconButton(
-                icon: const Icon(Icons.picture_as_pdf_rounded, color: Color(0xFF0D47A1), size: 24),
-                tooltip: 'Exportar historial filtrado',
+                            child: IconButton(
+                // 🔒 INTERCEPTOR VIP: Cambia el icono a un candado si el usuario no es de pago
+                icon: Icon(
+                  pantryState.isPremium ? Icons.picture_as_pdf_rounded : Icons.lock_rounded, 
+                  color: pantryState.isPremium ? const Color(0xFF0D47A1) : Colors.amber.shade900, 
+                  size: 24
+                ),
+                tooltip: pantryState.isPremium ? 'Exportar historial filtrado' : 'Función Premium',
                 onPressed: () {
-                  final datosContables = _obtenerHistorialContableFiltrado(
-                    historialActual, 
-                    pantryState.savedStores,
-                  );
-                  
-                  _exportarHistorialFiltradoPDF(
-                    datosContables['comprasAgrupadas'] as Map<String, List<Map<String, dynamic>>>, 
-                    datosContables['granTotalGeneral'] as double,
-                  );
+                  if (pantryState.isPremium) {
+                    final datosContables = _obtenerHistorialContableFiltrado(
+                      historialActual, 
+                      pantryState.savedStores,
+                    );
+                    
+                    _exportarHistorialFiltradoPDF(
+                      datosContables['comprasAgrupadas'] as Map<String, List<Map<String, dynamic>>>, 
+                      datosContables['granTotalGeneral'] as double,
+                    );
+                  } else {
+                    _mostrarAlertaPremiumDialog(context);
+                  }
                 },
               ),
+
             ),
           ),
           // Botón en la cabecera para borrar todo manualmente si el usuario desea liberar espacio
@@ -865,6 +875,37 @@ final pantryState = asyncPantry.requireValue;
   }
 
 
+  // 🔒 MODAL INFORMATIVO VIP: Avisa al usuario que la función es de pago
+  void _mostrarAlertaPremiumDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: const Row(
+            children: [
+              Icon(Icons.lock_rounded, color: Colors.amber),
+              SizedBox(width: 8),
+              Text('Función Premium', style: TextStyle(fontWeight: FontWeight.bold)),
+            ],
+          ),
+          content: const Text(
+            'La exportación de reportes contables en formato PDF es una característica exclusiva de la versión Premium.\n\nPara activarla, ponte en contacto con nuestro equipo de atención al cliente desde el canal de soporte en la pantalla principal.',
+            style: TextStyle(fontSize: 14, height: 1.4),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text(
+                'Entendido',
+                style: TextStyle(color: Color(0xFF0D47A1), fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
 
 
 }

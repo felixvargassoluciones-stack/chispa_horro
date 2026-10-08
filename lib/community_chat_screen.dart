@@ -49,7 +49,7 @@ class _CommunityChatScreenState extends ConsumerState<CommunityChatScreen> {
     setState(() => _isLoading = true);
     try {
       // 💡 Url del Web App Script de tu Google Sheet del Chat (Modo Lectura)
-      final Uri urlChat = Uri.parse('https://script.google.com/macros/s/AKfycbyJDR7ZeVkx9xnW-N307FL3XKDmtpJXix1u4LVF_6gPUiOxo_ajRGSB7-rkRWtzFvK1wQ/exec');
+      final Uri urlChat = Uri.parse('https://script.google.com/macros/s/AKfycbzbhGiYDMwPaCE-Us0ZeO4i48Yl2VYX_tCVoqOZ_ocUeLxXmj99-WePUKgL0-eyQDSeIA/exec');
       
       final response = await http.get(urlChat);
       if (response.statusCode == 200) {
@@ -78,7 +78,7 @@ class _CommunityChatScreenState extends ConsumerState<CommunityChatScreen> {
 
     try {
       // Usamos la misma URL de tu script del chat
-      final Uri urlChat = Uri.parse('https://script.google.com/macros/s/AKfycbyJDR7ZeVkx9xnW-N307FL3XKDmtpJXix1u4LVF_6gPUiOxo_ajRGSB7-rkRWtzFvK1wQ/exec');
+      final Uri urlChat = Uri.parse('https://script.google.com/macros/s/AKfycbzbhGiYDMwPaCE-Us0ZeO4i48Yl2VYX_tCVoqOZ_ocUeLxXmj99-WePUKgL0-eyQDSeIA/exec');
 
       // Enviamos el ID del mensaje y una bandera de reporte
       final bodyData = jsonEncode({

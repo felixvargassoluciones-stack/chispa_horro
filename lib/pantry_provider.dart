@@ -27,6 +27,7 @@ class PantryState {
   final String currentSupermarketId; 
   final List<Map<String, dynamic>> savedStores;
   final bool isEnvironmentLocked; 
+  final bool isPremium; // 🔒 VARIABLE VIP: Monitorea el estatus de pago en la RAM
 
   const PantryState({
     required this.items,
@@ -36,7 +37,9 @@ class PantryState {
     this.currentSupermarketId = 'Casa', 
     this.savedStores = const [],
     this.isEnvironmentLocked = false,
+    this.isPremium = false, // Base estándar para todos los usuarios nuevos
   });
+
   double get totalEstimatedExpense {
     return items.fold(0.0, (sum, item) => sum + (item.estimatedPrice * item.quantity));
   }
@@ -76,8 +79,9 @@ class PantryState {
     Map<String, double>? productLifespans,
     List<Map<String, dynamic>>? historicalPrices, 
     String? currentSupermarketId,
-    List<Map<String, dynamic>>? savedStores,
+        List<Map<String, dynamic>>? savedStores,
     bool? isEnvironmentLocked,
+    bool? isPremium,
   }) {
     return PantryState(
       items: items ?? this.items,
@@ -87,8 +91,10 @@ class PantryState {
       currentSupermarketId: currentSupermarketId ?? this.currentSupermarketId,
       savedStores: savedStores ?? this.savedStores,
       isEnvironmentLocked: isEnvironmentLocked ?? this.isEnvironmentLocked,
+      isPremium : isPremium ?? this.isPremium,
     );
   }
+
 }
 class PantryNotifier extends AsyncNotifier<PantryState> {
   
@@ -106,6 +112,10 @@ class PantryNotifier extends AsyncNotifier<PantryState> {
     try {
       debugPrint("📦 Local-First Activo: Restaurando alacena e IA predictiva desde SQLite.");
       final PantryState estadoCargado = await _fetchItemsFromLocalDatabase();
+
+      // ⚡ DISPARO AUTOMÁTICO AL INICIAR: Revisa el estatus de pago en segundo plano sin congelar la pantalla
+      Future.microtask(() => verificarEstatusPremiumServidor());
+
       return estadoCargado;
     } catch (e, stackTrace) {
   debugPrint("🚨 ERROR DETECTADO: $e");
@@ -1117,7 +1127,7 @@ class PantryNotifier extends AsyncNotifier<PantryState> {
 
       Future<void> enviarMetricasAnaliticasSheets(List<GroceryItem> purchasedItems) async {
     try {
-      final Uri urlAnalitica = Uri.parse('https://script.google.com/macros/s/AKfycbyJDR7ZeVkx9xnW-N307FL3XKDmtpJXix1u4LVF_6gPUiOxo_ajRGSB7-rkRWtzFvK1wQ/exec');
+      final Uri urlAnalitica = Uri.parse('https://script.google.com/macros/s/AKfycbzbhGiYDMwPaCE-Us0ZeO4i48Yl2VYX_tCVoqOZ_ocUeLxXmj99-WePUKgL0-eyQDSeIA/exec');
 
       final itemsMapped = purchasedItems.map((item) {
         String nombreTiendaMapeado = 'Casa';
@@ -1179,7 +1189,7 @@ class PantryNotifier extends AsyncNotifier<PantryState> {
     Future<void> enviarOfertaAlChatSheets(String nombreTienda, String bloqueTextoOfertas) async {
     try {
       // 🚀 RESPALDO WEB ANTI-CORS: Apuntamos de vuelta al script correcto de tu macro de Sheets
-      final Uri urlChat = Uri.parse('https://script.google.com/macros/s/AKfycbyJDR7ZeVkx9xnW-N307FL3XKDmtpJXix1u4LVF_6gPUiOxo_ajRGSB7-rkRWtzFvK1wQ/exec');
+      final Uri urlChat = Uri.parse('https://script.google.com/macros/s/AKfycbzbhGiYDMwPaCE-Us0ZeO4i48Yl2VYX_tCVoqOZ_ocUeLxXmj99-WePUKgL0-eyQDSeIA/exec');
 
       // 🚀 SOLUCIÓN WEB NATIVA: Codificación clásica de formulario plano para saltar las restricciones CORS de Chrome
       unawaited(
@@ -1204,8 +1214,39 @@ class PantryNotifier extends AsyncNotifier<PantryState> {
     }
   }
 
+    // 🛰️ MOTOR DE VERIFICACIÓN VIP: Consulta en vivo el estatus en la macro de Google
+  Future<void> verificarEstatusPremiumServidor() async {
+    final currentState = state.value;
+    if (currentState == null) return;
+
+    try {
+      // 🚀 Apuntamos a tu macro web con los parámetros de la función doGet corregida
+      final Uri urlValidacion = Uri.parse(
+        'https://script.google.com/macros/s/AKfycbzbhGiYDMwPaCE-Us0ZeO4i48Yl2VYX_tCVoqOZ_ocUeLxXmj99-WePUKgL0-eyQDSeIA/exec'
+      );
+
+      final response = await http.get(urlValidacion);
+      
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> data = jsonDecode(response.body);
+        final bool esPremiumReal = data['is_premium'] ?? false;
+
+        // Sincronizamos la RAM de Flutter de forma reactiva con el resultado de la nube
+        state = AsyncData(currentState.copyWith(isPremium: esPremiumReal));
+        debugPrint('🔒 LICENCIA SINCRO: El dispositivo tiene estatus Premium = $esPremiumReal');
+      }
+    } catch (e) {
+      debugPrint('⚠️ Falla de red al verificar estatus Premium: $e');
+    }
+  }
+
+
+
 }
 
 final pantryProvider = AsyncNotifierProvider<PantryNotifier, PantryState>(
   PantryNotifier.new,
+  
 );
+
+
