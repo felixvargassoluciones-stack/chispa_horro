@@ -721,12 +721,15 @@ class PantryNotifier extends AsyncNotifier<PantryState> {
     
     // 🚀 CORRECCIÓN DE INMUTABILIDAD PROFUNDA WEB: Forzamos el moldeado dinámico explicito de los mapas
     // en la RAM. Esto desbloquea el comando .insert(), permitiendo vaciar el carrito y cerrar el modal.
+        // 🚀 BLINDAJE WEB: Forzamos el mapeo dinámico de tipos numéricos para evitar colisiones de inmutabilidad en Chrome
     final List<Map<String, dynamic>> updatedHistoryList = currentPantryState.historicalPrices
-        .map((x) => Map<String, dynamic>.from(x))
+        .map((x) => Map<String, dynamic>.from(x as Map))
         .toList();
         
-    final Map<String, double> updatedLifespans = Map<String, double>.from(currentPantryState.productLifespans);
-    
+    final Map<String, double> updatedLifespans = currentPantryState.productLifespans.map(
+      (k, v) => MapEntry<String, double>(k, (v as num).toDouble()),
+    );
+
     final DateTime momentoCompra = DateTime.now();
     final String fechaSelloLlave = "${momentoCompra.day}-${momentoCompra.month}-${momentoCompra.year}";
     int microSegundoRAM = momentoCompra.millisecondsSinceEpoch;
@@ -1114,7 +1117,7 @@ class PantryNotifier extends AsyncNotifier<PantryState> {
 
       Future<void> enviarMetricasAnaliticasSheets(List<GroceryItem> purchasedItems) async {
     try {
-      final Uri urlAnalitica = Uri.parse('https://script.google.com/macros/s/AKfycbxa3HwjPSW7aSlXef8lHNKFns6UoxPiuUANgvZgI8zZEW9cTPVAZ4GqmkSDf0Pb8uQf4g/exec');
+      final Uri urlAnalitica = Uri.parse('https://script.google.com/macros/s/AKfycbxowT7w5MehNaQxs5QAw7fcuqVQm5ig9DeeLP9L3v42I8kjL7yK6qqcCQ3cbv18YlXOKQ/exec');
 
       final itemsMapped = purchasedItems.map((item) {
         String nombreTiendaMapeado = 'Casa';
@@ -1172,22 +1175,20 @@ class PantryNotifier extends AsyncNotifier<PantryState> {
     Future<void> enviarOfertaAlChatSheets(String nombreTienda, String bloqueTextoOfertas) async {
     try {
       // 🚀 RESPALDO WEB ANTI-CORS: Apuntamos de vuelta al script correcto de tu macro de Sheets
-      final Uri urlChat = Uri.parse('https://script.google.com/macros/s/AKfycbxa3HwjPSW7aSlXef8lHNKFns6UoxPiuUANgvZgI8zZEW9cTPVAZ4GqmkSDf0Pb8uQf4g/exec');
+      final Uri urlChat = Uri.parse('https://script.google.com/macros/s/AKfycbxowT7w5MehNaQxs5QAw7fcuqVQm5ig9DeeLP9L3v42I8kjL7yK6qqcCQ3cbv18YlXOKQ/exec');
 
-      final bodyData = jsonEncode({
-        'tienda': nombreTienda,
-        'ofertas': bloqueTextoOfertas,
-        'fecha': '${DateTime.now().day}/${DateTime.now().month}/${DateTime.now().year}',
-      });
-
+      // 🚀 SOLUCIÓN WEB NATIVA: Codificación clásica de formulario plano para saltar las restricciones CORS de Chrome
       unawaited(
         http.post(
           urlChat,
           headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json', // Evita que Chrome asfixie la petición antes de enviarla
+            'Content-Type': 'application/x-www-form-urlencoded',
           },
-          body: bodyData,
+          body: {
+            'tienda': nombreTienda,
+            'ofertas': bloqueTextoOfertas,
+            'fecha': '${DateTime.now().day}/${DateTime.now().month}/${DateTime.now().year}',
+          },
         ).then((response) {
           debugPrint('💬 Sheets Chat: Oferta comunitaria publicada con éxito.');
         }).catchError((error) {
