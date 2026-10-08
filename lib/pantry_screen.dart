@@ -28,19 +28,24 @@ class _PantryScreenState extends ConsumerState<PantryScreen> {
 
 
 
-      @override
+       @override
   void initState() {
     super.initState();
-    // 🚀 RESTAURADO: Escucha activa limpia sin llamadas de red fantasmas
+    // 🚀 ENFOQUE WEB SEGURO: Ejecuta la carga y apertura del diálogo de inmediato
+    // en el primer cuadro de renderizado, sin esperar a que cambie el estado.
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.listenManual(pantryProvider, (previous, next) {
-        if (next.hasValue && next.value != null && !_hasShowedStoreDialog) {
-          _hasShowedStoreDialog = true; // Bloquea futuras aperturas accidentales
-          _showManageStoresDialog(context, ref);
-        }
-      });
+      if (mounted && !_hasShowedStoreDialog) {
+        _hasShowedStoreDialog = true; // Bloquea aperturas accidentales futuras
+        
+        // Primero forzamos a cargar las tiendas que estén guardadas en la memoria
+        ref.read(pantryProvider.notifier).loadSavedStores();
+        
+        // Desplegamos el modal de golpe al usuario
+        _showManageStoresDialog(context, ref);
+      }
     });
   }
+
 
 
 
