@@ -712,17 +712,20 @@ class PantryNotifier extends AsyncNotifier<PantryState> {
     if (averageMinutes <= 0) return 1.0;
     return (minutesSegurosSince / averageMinutes).clamp(0.0, 1.0);
   }
-    Future<void> procesarBunkerYVaciarCarrito(List<GroceryItem> purchasedItems) async {
+      Future<void> procesarBunkerYVaciarCarrito(List<GroceryItem> purchasedItems) async {
     if (state.value == null || purchasedItems.isEmpty) return;
     final currentPantryState = state.requireValue;
 
-    // 🚀 ADAPTACIÓN WEB NATIVA: Filtramos en RAM los artículos pendientes que NO se marcaron
+    // Filtramos en RAM los artículos pendientes que NO se marcaron
     final remainingItems = currentPantryState.items.where((item) => !item.isChecked).toList();
-        // 🚀 CORRECCIÓN DE INMUTABILIDAD WEB: Duplicamos de forma elástica las colecciones base en la RAM.
-    // Esto evita el 'Uncaught Error' por objetos congelados y permite que el carrito se vacíe al instante.
-    final List<Map<String, dynamic>> updatedHistoryList = [...currentPantryState.historicalPrices];
-    final Map<String, double> updatedLifespans = {...currentPantryState.productLifespans};
-
+    
+    // 🚀 CORRECCIÓN DE INMUTABILIDAD PROFUNDA WEB: Forzamos el moldeado dinámico explicito de los mapas
+    // en la RAM. Esto desbloquea el comando .insert(), permitiendo vaciar el carrito y cerrar el modal.
+    final List<Map<String, dynamic>> updatedHistoryList = currentPantryState.historicalPrices
+        .map((x) => Map<String, dynamic>.from(x))
+        .toList();
+        
+    final Map<String, double> updatedLifespans = Map<String, double>.from(currentPantryState.productLifespans);
     
     final DateTime momentoCompra = DateTime.now();
     final String fechaSelloLlave = "${momentoCompra.day}-${momentoCompra.month}-${momentoCompra.year}";
