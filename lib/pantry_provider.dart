@@ -507,7 +507,7 @@ class PantryNotifier extends AsyncNotifier<PantryState> {
     if (state.value == null) return;
     final currentPantryState = state.requireValue;
     final now = DateTime.now();
-    final nowStr = now.toIso8601String();
+    
     final timestampId = 'item_${now.millisecondsSinceEpoch}';
 
     final oldItem = currentPantryState.items.firstWhere((item) => item.id == id);
@@ -555,40 +555,17 @@ class PantryNotifier extends AsyncNotifier<PantryState> {
       fractionLabel: oldItem.fractionLabel,
     );
 
-    final db = await _getDatabase();
-    if (isPredictive) {
-      await db.insert(
-        'pantry_items',
-        {
-          'id': updatedItem.id,
-          'name': updatedItem.name,
-          'estimated_price': updatedItem.estimatedPrice,
-          'real_price': updatedItem.realPrice,
-          'quantity': updatedItem.quantity,
-          'unit': updatedItem.unit,
-          'category': updatedItem.category,
-          'is_checked': 1,
-          'updated_at': nowStr,
-          'last_price_paid': updatedItem.lastPricePaid,
-          'supermarket_id': updatedItem.supermarketId ?? 'Casa',
-        },
-        conflictAlgorithm: ConflictAlgorithm.replace,
-      );
-    } else {
-      await db.update(
-        'pantry_items',
-        {
-          'name': finalName,
-          'estimated_price': updatedItem.estimatedPrice, 
-          'real_price': realPrice, 
-          'quantity': finalQuantity,
-          'is_checked': 1,
-          'updated_at': nowStr,
-        },
-        where: 'id = ?',
-        whereArgs: [id],
-      );
-    }
+          final List<GroceryItem> updatedItemsList = currentPantryState.items.map((item) {
+      return item.id == id ? updatedItem : item.copyWith();
+    }).toList();
+
+    final newState = currentPantryState.copyWith(items: updatedItemsList);
+    
+    await _saveStateToLocalStorage(newState);
+    
+    state = AsyncValue.data(newState);
+
+
 
     final updatedItems = currentPantryState.items.map((item) {
       return item.id == id ? updatedItem : item.copyWith();
