@@ -1001,7 +1001,7 @@ class _PantryScreenState extends ConsumerState<PantryScreen> {
             },
             child: const Text('Cancelar', style: TextStyle(color: Colors.black54, fontWeight: FontWeight.bold)),
           ),
-                ElevatedButton(
+                             ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: Colors.green.shade700),
             onPressed: () async {
               final String finalName = nameController.text.trim();
@@ -1010,7 +1010,6 @@ class _PantryScreenState extends ConsumerState<PantryScreen> {
               
               if (finalName.isEmpty) return;
 
-              // 1. Ejecuta la inserción en la base de datos local con el precio capturado
               final String finalCategory = _selectedCategory == 'Todos' ? 'General' : _selectedCategory;
               
               if (currentStoreId == 'Casa') {
@@ -1020,18 +1019,18 @@ class _PantryScreenState extends ConsumerState<PantryScreen> {
                   category: finalCategory,
                 );
               } else {
-                // Si es tienda, lo creamos e indicamos al notifier que va directo al carrito con su precio real
+                // 🚀 ADAPTACIÓN WEB: Si es tienda, insertamos el artículo usando directamente 
+                // el precio real de etiqueta provisto, asegurando flujo limpio sin colisión de lectura.
                 await notifier.addManualItem(
                   name: finalName,
                   quantity: parsedQty,
                   category: finalCategory,
                 );
-                
-                // Buscamos el último artículo agregado para obtener su ID o dejamos que el notifier use su lógica.
-                // Como sugerencia para asegurar que vaya al carrito de inmediato si tu backend lo requiere:
+
+                // Forzamos el salto al carrito usando la lista controlada síncronamente
                 final items = ref.read(pantryProvider).value?.items ?? [];
                 if (items.isNotEmpty) {
-                  final newItem = items.firstWhere((i) => i.name == finalName && !i.isChecked, orElse: () => items.last);
+                  final newItem = items.firstWhere((i) => i.name == finalName && !i.isChecked, orElse: () => items.first);
                   await notifier.moveToCartWithPrice(
                     id: newItem.id,
                     realPrice: parsedPrice,
@@ -1041,7 +1040,7 @@ class _PantryScreenState extends ConsumerState<PantryScreen> {
                 }
               }
 
-              // 2. Planifica el movimiento del pasillo en la pantalla principal de forma segura
+              // Planifica el movimiento del pasillo en la pantalla principal de forma segura
               WidgetsBinding.instance.addPostFrameCallback((_) {
                 if (mounted) {
                   setState(() {
@@ -1050,7 +1049,7 @@ class _PantryScreenState extends ConsumerState<PantryScreen> {
                 }
               });
 
-              // Liberación y limpieza de memoria RAM incluyendo los nuevos controladores
+              // Liberación y limpieza de memoria RAM
               nameFocusNode.dispose();
               qtyFocusNode.dispose();
               priceFocusNode.dispose();
@@ -1062,6 +1061,7 @@ class _PantryScreenState extends ConsumerState<PantryScreen> {
             },
             child: const Text('Guardar', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
           ),
+
 
         ],
       ),
