@@ -8,6 +8,9 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 
+import 'package:url_launcher/url_launcher.dart' as url_launcher;
+
+
 class PurchaseHistoryScreen extends ConsumerStatefulWidget {
   const PurchaseHistoryScreen({super.key});
 
@@ -78,7 +81,24 @@ final pantryState = asyncPantry.requireValue;
        title: const Text('📋 Historial', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 26)),
         backgroundColor: Colors.orange.shade100,
         centerTitle: false,
-               actions: [
+                  actions: [
+          // 📢 BOTÓN GEMELO: Acceso directo a Soporte Técnico y Atención al Cliente
+          Padding(
+            padding: const EdgeInsets.only(top: 8.0, bottom: 8.0, right: 4.0),
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(10),
+                boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2))],
+              ),
+              child: IconButton(
+                icon: Icon(Icons.support_agent_rounded, color: Colors.green.shade700, size: 24),
+                tooltip: 'Contacto y Soporte Pro',
+                onPressed: _openSupportWhatsApp,
+              ),
+            ),
+          ),
+
           // 🔒 BOTÓN 1: PDF con indicador de candado condicional
           Padding(
             padding: const EdgeInsets.only(top: 8.0, bottom: 8.0, right: 10.0),
@@ -131,7 +151,6 @@ final pantryState = asyncPantry.requireValue;
                       tooltip: 'Vaciar base de datos',
                       onPressed: () {
                         if (pantryState.isPremium) {
-                          // Abre tu cuadro de diálogo original para borrar todo
                           _mostrarConfirmarBorradoDialog(context, pantryNotifier);
                         } else {
                           _mostrarAlertaPremiumDialog(context);
@@ -148,6 +167,7 @@ final pantryState = asyncPantry.requireValue;
               ),
             ),
         ],
+
 
       ),
       body: Column(
@@ -997,6 +1017,27 @@ final pantryState = asyncPantry.requireValue;
     );
   }
 
+
+   /// 🎧 GEMELO SOPORTE: Abre de forma interactiva el contacto directo por WhatsApp con el Ing. Félix
+  Future<void> _openSupportWhatsApp() async {
+    const String tuNumeroWhatsApp = '527201494833';
+    const String mensajeTexto = 'Hola Ing. Félix Vargas. Necesito soporte técnico o información sobre la activación Premium de ChispaHorro⚡';
+    
+    final String urlTexto = "whatsapp://send?phone=$tuNumeroWhatsApp&text=${Uri.encodeComponent(mensajeTexto)}";
+
+    try {
+      await url_launcher.launchUrl(Uri.parse(urlTexto), mode: url_launcher.LaunchMode.externalApplication);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('⚠️ No se pudo abrir WhatsApp. Verifica que la app esté instalada o usa la versión móvil.')),
+        );
+      }
+    }
+  }
+
+
+  
 
 
 }
