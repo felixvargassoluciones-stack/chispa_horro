@@ -136,7 +136,7 @@ class PantryNotifier extends AsyncNotifier<PantryState> {
     }
   }
 
-  Future<void> registerNewStore(String name) async {
+    Future<void> registerNewStore(String name) async {
     final currentState = state.value;
     if (currentState == null) return;
 
@@ -147,16 +147,31 @@ class PantryNotifier extends AsyncNotifier<PantryState> {
       'name': name,
     };
 
-    final dbHelper = DatabaseHelper();
-    await dbHelper.insertStore(newStore);
-    
-    final updatedStores = await dbHelper.getAllStores();
+    // 🚀 ADAPTACIÓN WEB NATIVA: Creamos la nueva lista de tiendas en la RAM del estado actual
+    final updatedStores = List<Map<String, dynamic>>.from(currentState.savedStores)..add(newStore);
 
-    state = AsyncData(currentState.copyWith(
+    // Empaquetamos el nuevo estado completo con la sucursal inyectada
+    final newState = currentState.copyWith(
       currentSupermarketId: uniqueId,
       savedStores: updatedStores,
-    ));
+    );
+
+    // Guardamos la configuración de inmediato en SharedPreferences de internet
+    await _saveStateToLocalStorage(newState);
+    
+    // Notificamos a la interfaz visual para que redibuje el modal reactivamente
+    state = AsyncData(newState);
   }
+
+    Future<void> _saveStateToLocalStorage(PantryState newState) async {
+    // 🚀 PERSISTENCIA EN WEB: Guarda los cambios completos en texto JSON dentro del navegador
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('chispahorro_web_cache', newState.toJsonString());
+  }
+
+
+
+
   Future<void> updateStoreName(String id, String newName) async {
     final currentState = state.value;
     if (currentState == null) return;
