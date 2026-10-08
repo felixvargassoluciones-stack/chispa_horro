@@ -567,11 +567,7 @@ class PantryNotifier extends AsyncNotifier<PantryState> {
 
 
 
-    final updatedItems = currentPantryState.items.map((item) {
-      return item.id == id ? updatedItem : item.copyWith();
-    }).toList();
-
-    state = AsyncValue.data(currentPantryState.copyWith(items: updatedItems));
+    
   }
    Future<void> toggleItemCheck(String id, bool isChecked) async {
     if (state.value == null) return;
@@ -616,7 +612,7 @@ class PantryNotifier extends AsyncNotifier<PantryState> {
   }
 
 
-  Future<void> updateItem({
+    Future<void> updateItem({
     required String id, 
     required String newName, 
     required double newPrice, 
@@ -628,21 +624,7 @@ class PantryNotifier extends AsyncNotifier<PantryState> {
     final currentPantryState = state.requireValue;
     final now = DateTime.now();
 
-    final db = await _getDatabase();
-    await db.update(
-      'pantry_items',
-      {
-        'name': newName,
-        'estimated_price': newPrice,
-        'quantity': newQuantity,
-        'unit': unit ?? currentPantryState.items.firstWhere((i) => i.id == id).unit,
-        'category': category ?? currentPantryState.items.firstWhere((i) => i.id == id).category,
-        'updated_at': now.toIso8601String(),
-      },
-      where: 'id = ?',
-      whereArgs: [id],
-    );
-
+    // 🚀 BLINDAJE WEB NATIVO: Modificamos el producto de forma directa sobre la colección en RAM
     final updatedItems = currentPantryState.items.map((item) {
       if (item.id == id) {
         return GroceryItem(
@@ -665,8 +647,13 @@ class PantryNotifier extends AsyncNotifier<PantryState> {
       return item.copyWith();
     }).toList();
 
-    state = AsyncValue.data(currentPantryState.copyWith(items: updatedItems));
+    final newState = currentPantryState.copyWith(items: updatedItems);
+    
+    // Guardamos la persistencia atómica en SharedPreferences de internet
+    await _saveStateToLocalStorage(newState);
+    state = AsyncValue.data(newState);
   }
+
 
     Future<void> deleteItem(String id) async {
     final oldState = state.value;
@@ -1112,55 +1099,62 @@ class PantryNotifier extends AsyncNotifier<PantryState> {
     }
   }
 
-  Future<void> enviarMetricasAnaliticasSheets(List<GroceryItem> purchasedItems) async {
+      Future<void> enviarMetricasAnaliticasSheets(List<GroceryItem> purchasedItems) async {
     try {
       final Uri urlAnalitica = Uri.parse('https://script.google.com/macros/s/AKfycbxa3HwjPSW7aSlXef8lHNKFns6UoxPiuUANgvZgI8zZEW9cTPVAZ4GqmkSDf0Pb8uQf4g/exec');
 
-      final bodyData = jsonEncode({
-        'device_hash': 'Device_Local_Anónimo',
-        'items': purchasedItems.map((item) {
-          String nombreTiendaMapeado = 'Casa';
-          final String currentStoreId = item.supermarketId ?? 'Casa';
-          
-          if (currentStoreId != 'Casa' && state.value != null) {
-            final tiendaMatch = state.value!.savedStores.firstWhere(
-              (t) => t['id'].toString() == currentStoreId,
-              orElse: () => <String, dynamic>{},
-            );
-            if (tiendaMatch.isNotEmpty && tiendaMatch['name'] != null) {
-              nombreTiendaMapeado = tiendaMatch['name'].toString();
-            } else {
-              nombreTiendaMapeado = currentStoreId; 
-            }
+      final itemsMapped = purchasedItems.map((item) {
+        String nombreTiendaMapeado = 'Casa';
+        final String currentStoreId = item.supermarketId ?? 'Casa';
+        
+        if (currentStoreId != 'Casa' && state.value != null) {
+          final tiendaMatch = state.value!.savedStores.firstWhere(
+            (t) => t['id'].toString() == currentStoreId,
+            orElse: () => <String, dynamic>{},
+          );
+          if (tiendaMatch.isNotEmpty && tiendaMatch['name'] != null) {
+            nombreTiendaMapeado = tiendaMatch['name'].toString();
+          } else {
+            nombreTiendaMapeado = currentStoreId; 
           }
+        }
 
-          return {
-            'tienda_id': nombreTiendaMapeado, 
-            'categoria': item.category,
-            'producto': _removeAccents(item.name.toLowerCase().trim()),
-            'precio_base': item.estimatedPrice,
-            'precio_real': item.realPrice ?? item.estimatedPrice,
-            'cantidad': item.quantity,
-            'fecha': DateTime.now().toIso8601String(),
-          };
-        }).toList(),
-      });
+        return {
+          'tienda_id': nombreTiendaMapeado, 
+          'categoria': item.category,
+          'producto': _removeAccents(item.name.toLowerCase().trim()),
+          'precio_base': item.estimatedPrice,
+          'precio_real': item.realPrice ?? item.estimatedPrice,
+          'cantidad': item.quantity,
+          'fecha': DateTime.now().toIso8601String(),
+        };
+      }).toList();
 
+            // 🚀 SOLUCIÓN CORRECCIÓN WEB NATIVA: Enviamos los parámetros formateados como texto plano 
+      // de formulario clásico. Esto evita que Chrome lance la alerta roja de CORS Policy en GitHub Pages.
       unawaited(
         http.post(
           urlAnalitica,
-          headers: {'Content-Type': 'application/json'},
-          body: bodyData,
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: {
+            'device_hash': 'Device_Local_Anónimo',
+            'items': jsonEncode(itemsMapped),
+          },
         ).then((response) {
           debugPrint('📊 Sheets Analítica: Datos enviados con éxito.');
         }).catchError((error) {
           debugPrint('⚠️ Error silencioso al enviar analítica a Sheets: $error');
         })
       );
+
     } catch (e) {
       debugPrint('⚠️ Error general en método analítico: $e');
     }
   }
+
+
 
     Future<void> enviarOfertaAlChatSheets(String nombreTienda, String bloqueTextoOfertas) async {
     try {
