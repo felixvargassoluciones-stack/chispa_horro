@@ -107,17 +107,30 @@ class PantryNotifier extends AsyncNotifier<PantryState> {
     return _db!;
   }
 
-  @override
+    @override
   Future<PantryState> build() async {
     try {
       debugPrint("📦 Local-First Activo: Restaurando alacena e IA predictiva desde SQLite.");
+      
+      // 🛡️ FIRMA INMUTABLE DE DISPOSITIVO: Creamos y fijamos el número de serie para este navegador
+      final prefs = await SharedPreferences.getInstance();
+      String? equipoId = prefs.getString('chispahorro_device_fixed_id');
+      
+      if (equipoId == null || equipoId.isEmpty) {
+        // Fabricamos el identificador con el formato exacto de tu base de datos del chat
+        equipoId = 'MSG_${DateTime.now().millisecondsSinceEpoch}_${(100 + (DateTime.now().microsecondsSinceEpoch % 900))}';
+        await prefs.setString('chispahorro_device_fixed_id', equipoId);
+        debugPrint('🆔 REGISTRO DE HARDWARE: Generada nueva firma fija para este equipo: $equipoId');
+      }
+
       final PantryState estadoCargado = await _fetchItemsFromLocalDatabase();
 
-      // ⚡ DISPARO AUTOMÁTICO AL INICIAR: Revisa el estatus de pago en segundo plano sin congelar la pantalla
+      // ⚡ DISPARO AUTOMÁTICO AL INICIAR: Revisa el estatus de pago en segundo plano usando el ID permanente
       Future.microtask(() => verificarEstatusPremiumServidor());
 
       return estadoCargado;
     } catch (e, stackTrace) {
+
   debugPrint("🚨 ERROR DETECTADO: $e");
   debugPrint("🛰️ RUTA DEL FALLO (STACKTRACE):");
   if (kDebugMode) {
@@ -1214,16 +1227,19 @@ class PantryNotifier extends AsyncNotifier<PantryState> {
     }
   }
 
-     // 🔒 REGISTRO DE LICENCIAS MANUAL: Envía el usuario y el hash para validación administrativa
+     // 🔒 REGISTRO DE LICENCIAS MANUAL: Envía el usuario y el hash dinámico para validación administrativa
   Future<bool> enviarSolicitudPremium(String identificadorUsuario) async {
     if (identificadorUsuario.trim().isEmpty) return false;
 
     try {
+      // 🚀 Recuperamos el ID inmutable fijado en el arranque para este navegador específico
+      final prefs = await SharedPreferences.getInstance();
+      final String hashFijoEquipo = prefs.getString('chispahorro_device_fixed_id') ?? 'MSG_DEFAULT_ERROR';
+
       final Uri urlRegistro = Uri.parse(
         'https://script.google.com/macros/s/AKfycbzUY6a0frR_6z5oEoQ5ccDzvmyd-0YpBIn3Up8BZroDyCg66avhzTz-GCNox7RkT1PRsQ/exec'
       );
 
-      // Desplegamos el paquete usando codificación clásica de formulario tradicional (CORS Proof)
       final response = await http.post(
         urlRegistro,
         headers: {
@@ -1232,14 +1248,14 @@ class PantryNotifier extends AsyncNotifier<PantryState> {
         body: {
           'accion': 'solicitar_premium',
           'usuario': identificadorUsuario.trim(),
-          'device_hash': 'Device_Local_Anónimo',
+          'device_hash': hashFijoEquipo, // 🔥 ENVIAR AL EXCEL: Amarramos la solicitud al número de serie real de este hardware
         },
       );
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> resData = jsonDecode(response.body);
         if (resData['status'] == 'success') {
-          debugPrint('📥 SOLICITUD DE LICENCIA: Registrada con éxito en la nube.');
+          debugPrint('📥 SOLICITUD DE LICENCIA [$hashFijoEquipo]: Registrada con éxito en la nube.');
           return true;
         }
       }
@@ -1251,17 +1267,28 @@ class PantryNotifier extends AsyncNotifier<PantryState> {
   }
 
 
+     
+  
 
-    // 🛰️ MOTOR DE VERIFICACIÓN VIP: Consulta en vivo el estatus en la macro de Google
+
+
+     // 🛰️ MOTOR DE VERIFICACIÓN VIP: Consulta en vivo el estatus dinámico en la macro de Google
   Future<void> verificarEstatusPremiumServidor() async {
     final currentState = state.value;
     if (currentState == null) return;
 
     try {
-      // 🚀 Apuntamos a tu macro web con los parámetros de la función doGet corregida
+      // 🚀 Recuperamos el ID inmutable fijado en el arranque para este navegador específico
+      final prefs = await SharedPreferences.getInstance();
+      final String hashFijoEquipo = prefs.getString('chispahorro_device_fixed_id') ?? 'MSG_DEFAULT_ERROR';
+
+      // Adjuntamos las variables query dinámicas para que la función doGet localice la fila en tu Excel
       final Uri urlValidacion = Uri.parse(
         'https://script.google.com/macros/s/AKfycbzUY6a0frR_6z5oEoQ5ccDzvmyd-0YpBIn3Up8BZroDyCg66avhzTz-GCNox7RkT1PRsQ/exec'
-      );
+      ).replace(queryParameters: {
+        'accion': 'verificar_premium',
+        'device_hash': hashFijoEquipo, // 🔥 CONSULTA FIJA: Busca el número de serie de este hardware
+      });
 
       final response = await http.get(urlValidacion);
       
@@ -1270,14 +1297,15 @@ class PantryNotifier extends AsyncNotifier<PantryState> {
         final dynamic rawPremium = data['is_premium'];
         final bool esPremiumReal = rawPremium == true || rawPremium.toString().toLowerCase() == 'true';
 
-        // Sincronizamos la RAM de Flutter de forma reactiva con el resultado de la nube
+        // Sincronizamos la memoria RAM de Flutter con el veredicto en vivo de tu Google Sheets
         state = AsyncData(currentState.copyWith(isPremium: esPremiumReal));
-        debugPrint('🔒 LICENCIA SINCRO: El dispositivo tiene estatus Premium = $esPremiumReal');
+        debugPrint('🔒 LICENCIA SINCRO [$hashFijoEquipo]: Estatus Premium = $esPremiumReal');
       }
     } catch (e) {
       debugPrint('⚠️ Falla de red al verificar estatus Premium: $e');
     }
   }
+
 
 
 
