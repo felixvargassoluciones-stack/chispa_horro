@@ -13,6 +13,11 @@ import 'grocery_item.dart';
 import 'database_helper.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:http/http.dart' as http;
+
+
+
+
+
 @immutable
 class PantryState {
   final List<GroceryItem> items;
@@ -102,9 +107,14 @@ class PantryNotifier extends AsyncNotifier<PantryState> {
       debugPrint("📦 Local-First Activo: Restaurando alacena e IA predictiva desde SQLite.");
       final PantryState estadoCargado = await _fetchItemsFromLocalDatabase();
       return estadoCargado;
-    } catch (e) {
-      debugPrint("🚨 Error al decodificar cache relacional local. Iniciando sesion limpia: $e");
+    } catch (e, stackTrace) {
+  debugPrint("🚨 ERROR DETECTADO: $e");
+  debugPrint("🛰️ RUTA DEL FALLO (STACKTRACE):");
+  if (kDebugMode) {
+        debugPrint(stackTrace.toString()); // 🔥 CORRECCIÓN: Usa debugPrint bajo entorno controlado de pruebas
+      }
     }
+
     
     return PantryState(
       items: [],
