@@ -1117,7 +1117,7 @@ class PantryNotifier extends AsyncNotifier<PantryState> {
 
       Future<void> enviarMetricasAnaliticasSheets(List<GroceryItem> purchasedItems) async {
     try {
-      final Uri urlAnalitica = Uri.parse('https://script.google.com/macros/s/AKfycbxowT7w5MehNaQxs5QAw7fcuqVQm5ig9DeeLP9L3v42I8kjL7yK6qqcCQ3cbv18YlXOKQ/exec');
+      final Uri urlAnalitica = Uri.parse('https://script.google.com/macros/s/AKfycbyJDR7ZeVkx9xnW-N307FL3XKDmtpJXix1u4LVF_6gPUiOxo_ajRGSB7-rkRWtzFvK1wQ/exec');
 
       final itemsMapped = purchasedItems.map((item) {
         String nombreTiendaMapeado = 'Casa';
@@ -1148,6 +1148,7 @@ class PantryNotifier extends AsyncNotifier<PantryState> {
 
             // 🚀 SOLUCIÓN CORRECCIÓN WEB NATIVA: Enviamos los parámetros formateados como texto plano 
       // de formulario clásico. Esto evita que Chrome lance la alerta roja de CORS Policy en GitHub Pages.
+            // 🚀 SOLUCIÓN WEB DEFINITIVA: Desglosamos la carga para que viaje como texto plano directo compatible con e.parameter
       unawaited(
         http.post(
           urlAnalitica,
@@ -1155,8 +1156,9 @@ class PantryNotifier extends AsyncNotifier<PantryState> {
             'Content-Type': 'application/x-www-form-urlencoded',
           },
           body: {
+            'accion': 'analitica', // 🛡️ Bandera de control para la macro
             'device_hash': 'Device_Local_Anónimo',
-            'items': jsonEncode(itemsMapped),
+            'items_json': jsonEncode(itemsMapped), // Enviamos la cadena JSON dentro de la clave del formulario
           },
         ).then((response) {
           debugPrint('📊 Sheets Analítica: Datos enviados con éxito.');
@@ -1164,6 +1166,8 @@ class PantryNotifier extends AsyncNotifier<PantryState> {
           debugPrint('⚠️ Error silencioso al enviar analítica a Sheets: $error');
         })
       );
+
+      
 
     } catch (e) {
       debugPrint('⚠️ Error general en método analítico: $e');
@@ -1175,7 +1179,7 @@ class PantryNotifier extends AsyncNotifier<PantryState> {
     Future<void> enviarOfertaAlChatSheets(String nombreTienda, String bloqueTextoOfertas) async {
     try {
       // 🚀 RESPALDO WEB ANTI-CORS: Apuntamos de vuelta al script correcto de tu macro de Sheets
-      final Uri urlChat = Uri.parse('https://script.google.com/macros/s/AKfycbxowT7w5MehNaQxs5QAw7fcuqVQm5ig9DeeLP9L3v42I8kjL7yK6qqcCQ3cbv18YlXOKQ/exec');
+      final Uri urlChat = Uri.parse('https://script.google.com/macros/s/AKfycbyJDR7ZeVkx9xnW-N307FL3XKDmtpJXix1u4LVF_6gPUiOxo_ajRGSB7-rkRWtzFvK1wQ/exec');
 
       // 🚀 SOLUCIÓN WEB NATIVA: Codificación clásica de formulario plano para saltar las restricciones CORS de Chrome
       unawaited(
