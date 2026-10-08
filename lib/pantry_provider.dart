@@ -199,13 +199,22 @@ class PantryNotifier extends AsyncNotifier<PantryState> {
   }
 
     Future<PantryState> _fetchItemsFromLocalDatabase() async {
-    final db = await _getDatabase();
+       final prefs = await SharedPreferences.getInstance();
+    final String? cachedData = prefs.getString('chispahorro_web_cache');
 
-    // 🚀 CORRECCIÓN WEB: Ejecutamos las consultas de forma secuencial con await independiente.
-    // Esto evita el Deadlock y el error 'unsupported result null' en navegadores.
-    final List<Map<String, dynamic>> productsResponse = await db.query('pantry_items');
-    final List<Map<String, dynamic>> historyResponse = await db.query('purchase_history', orderBy: 'purchase_date DESC, id DESC');
-    final List<Map<String, dynamic>> savedStoresResponse = await db.query('stores_catalog', orderBy: 'name ASC');
+    if (cachedData != null && cachedData.isNotEmpty) {
+      try {
+        debugPrint("📦 LocalStorage Exitoso: Sincronizando datos de alacena.");
+        return PantryState.fromJsonString(cachedData);
+      } catch (e) {
+        debugPrint("⚠️ Error al deserializar JSON local. Usando valores base: $e");
+      }
+    }
+
+    final List<Map<String, dynamic>> productsResponse = [];
+    final List<Map<String, dynamic>> historyResponse = [];
+    final List<Map<String, dynamic>> savedStoresResponse = [];
+
 
     final Map<String, List<DateTime>> purchaseDatesGrouped = {};
     final Map<String, Map<String, dynamic>> lastPurchaseMeta = {};
@@ -465,26 +474,14 @@ class PantryNotifier extends AsyncNotifier<PantryState> {
       supermarketId: currentPantryState.currentSupermarketId,
     );
 
-    final db = await _getDatabase();
-    await db.insert(
-      'pantry_items', 
-      {
-        'id': tempItem.id,
-        'name': tempItem.name,
-        'estimated_price': tempItem.estimatedPrice,
-        'quantity': tempItem.quantity,
-        'unit': tempItem.unit,
-        'category': tempItem.category, 
-        'is_checked': tempItem.isChecked ? 1 : 0,
-        'updated_at': now.toIso8601String(),
-        'last_price_paid': tempItem.lastPricePaid ?? 0.0,
-        'supermarket_id': tempItem.supermarketId ?? 'Casa', 
-      },
-      conflictAlgorithm: ConflictAlgorithm.replace,
-    );
+        final updatedItems = [tempItem, ...oldItems];
+    final newState = currentPantryState.copyWith(items: updatedItems);
+    
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('chispahorro_web_cache', newState.toJsonString());
+    
+    state = AsyncValue.data(newState);
 
-    final updatedItems = [tempItem, ...oldItems];
-    state = AsyncValue.data(currentPantryState.copyWith(items: updatedItems));
   }
   Future<void> moveToCartWithPrice({
     required String id,
