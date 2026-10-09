@@ -11,7 +11,10 @@ import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'grocery_item.dart';
 import 'database_helper.dart';
-import 'package:sqflite/sqflite.dart';
+
+import 'package:url_launcher/url_launcher.dart'; // 🚀 LÍNEA NUEVA A INYECTAR
+
+
 import 'package:http/http.dart' as http;
 
 
@@ -98,14 +101,9 @@ class PantryState {
 }
 class PantryNotifier extends AsyncNotifier<PantryState> {
   
-  Database? _db;
+ 
 
-  Future<Database> _getDatabase() async {
-    if (_db != null) return _db!;
-    // 🚀 MEJORA DE COMPATIBILIDAD WEB: Usamos directamente el inicializador seguro de DatabaseHelper
-    _db = await DatabaseHelper().database;
-    return _db!;
-  }
+ 
 
     @override
   Future<PantryState> build() async {
@@ -789,154 +787,77 @@ class PantryNotifier extends AsyncNotifier<PantryState> {
     state = AsyncValue.data(newState);
   }
 
-  Future<void> eliminarRegistroHistorialPorLlave(String compositeKey) async {
+    Future<void> eliminarRegistroHistorialPorLlave(String compositeKey) async {
     if (!state.hasValue) return;
     final currentPantryState = state.requireValue;
 
-    final matchRef = currentPantryState.historicalPrices.firstWhere(
-      (element) => element['compositeKey'] == compositeKey,
-      orElse: () => <String, dynamic>{},
-    );
-
-    if (matchRef.isEmpty) return;
-    
-    final DateTime fechaRef = matchRef['date'] as DateTime;
-    final double precioRef = matchRef['price'] as double;
-    
-    String storeId = 'Casa';
-    String nombreEnLlave = '';
-    
-    final int inicioName = compositeKey.indexOf('NAME_');
-    final int finName = compositeKey.indexOf('_CAT:');
-    if (inicioName != -1 && finName != -1) {
-      nombreEnLlave = compositeKey.substring(inicioName + 5, finName);
-    }
-
-    final List<String> partes = compositeKey.split('_');
-    for (final String parte in partes) {
-      if (parte.startsWith('STR:')) {
-        storeId = parte.replaceAll('STR:', '');
-        if (storeId == 'STORE' && partes.length > partes.indexOf(parte) + 1) {
-          storeId = 'STORE_${partes[partes.indexOf(parte) + 1]}';
-        }
-      }
-    }
-
-    final db = await _getDatabase();
-    final List<Map<String, dynamic>> filasCandidatas = await db.query(
-      'purchase_history',
-      where: 'purchase_date = ? AND store_id = ?',
-      whereArgs: [fechaRef.toIso8601String(), storeId],
-    );
-
-    int? idParaEliminar;
-    for (final fila in filasCandidatas) {
-      final String nameDbLimpio = _removeAccents((fila['product_name'] ?? '').toString().toLowerCase().trim());
-      final double precioDb = (fila['price_paid'] ?? 0.0) is int 
-          ? (fila['price_paid'] as int).toDouble() 
-          : (fila['price_paid'] ?? 0.0) as double;
-
-      if (nameDbLimpio == nombreEnLlave && precioDb == precioRef) {
-        idParaEliminar = fila['id'] as int;
-        break;
-      }
-    }
-
-    if (idParaEliminar != null) {
-      await db.delete(
-        'purchase_history',
-        where: 'id = ?',
-        whereArgs: [idParaEliminar],
-      );
-    }
-
+    // 🚀 BLINDAJE WEB NATIVO: Purgamos el registro de la lista en RAM sin tocar SQLite
     final updatedHistoryList = currentPantryState.historicalPrices
         .where((element) => element['compositeKey'] != compositeKey)
         .toList();
 
-    state = AsyncValue.data(currentPantryState.copyWith(
+    final newState = currentPantryState.copyWith(
       historicalPrices: updatedHistoryList,
-    ));
+    );
+
+    // Persistimos el cambio en el almacenamiento local del navegador y actualizamos el estado visual
+    await _saveStateToLocalStorage(newState);
+    state = AsyncValue.data(newState);
   }
 
-  Future<void> simularAntiguedadRegistroPorLlave({
+
+    Future<void> simularAntiguedadRegistroPorLlave({
     required String compositeKey,
     required int diasAntiguedad,
   }) async {
     if (!state.hasValue) return;
     final currentPantryState = state.requireValue;
 
-    final matchRef = currentPantryState.historicalPrices.firstWhere(
-      (element) => element['compositeKey'] == compositeKey,
-      orElse: () => <String, dynamic>{},
+    // 🚀 CORRECCIÓN DE INMUTABILIDAD: Forzamos el moldeado explícito de los mapas en la RAM
+    final List<Map<String, dynamic>> updatedHistoryList = currentPantryState.historicalPrices
+        .map((x) => Map<String, dynamic>.from(x as Map))
+        .toList();
+
+    // Localizamos el artículo por su clave compuesta cronológica
+    final int index = updatedHistoryList.indexWhere((element) => element['compositeKey'] == compositeKey);
+    if (index == -1) return;
+
+    final dynamic rawDate = updatedHistoryList[index]['date'];
+    DateTime fechaOriginal = DateTime.now();
+    if (rawDate is String) {
+      fechaOriginal = DateTime.tryParse(rawDate) ?? DateTime.now();
+    } else if (rawDate is DateTime) {
+      fechaOriginal = rawDate;
+    }
+
+    // Restamos los días de antigüedad de forma síncrona en Dart
+    final DateTime nuevaFechaSimulada = fechaOriginal.subtract(Duration(days: diasAntiguedad));
+
+    // Guardamos la nueva fecha como String ISO8601 para mantener consistencia en la caché JSON
+    updatedHistoryList[index]['date'] = nuevaFechaSimulada.toIso8601String();
+
+    final newState = currentPantryState.copyWith(
+      historicalPrices: updatedHistoryList,
     );
 
-    if (matchRef.isEmpty) return;
-    
-    final DateTime fechaRef = matchRef['date'] as DateTime;
-    final double precioRef = matchRef['price'] as double;
-    
-    String storeId = 'Casa';
-    String nombreEnLlave = '';
-    
-    final int inicioName = compositeKey.indexOf('NAME_');
-    final int finName = compositeKey.indexOf('_CAT:');
-    if (inicioName != -1 && finName != -1) {
-      nombreEnLlave = compositeKey.substring(inicioName + 5, finName);
-    }
-
-    final List<String> partes = compositeKey.split('_');
-    for (final String parte in partes) {
-      if (parte.startsWith('STR:')) {
-        storeId = parte.replaceAll('STR:', '');
-        if (storeId == 'STORE' && partes.length > partes.indexOf(parte) + 1) {
-          storeId = 'STORE_${partes[partes.indexOf(parte) + 1]}';
-        }
-      }
-    }
-
-    final db = await _getDatabase();
-    final List<Map<String, dynamic>> filasCandidatas = await db.query(
-      'purchase_history',
-      where: 'purchase_date = ? AND store_id = ?',
-      whereArgs: [fechaRef.toIso8601String(), storeId],
-    );
-
-    int? idParaModificar;
-    for (final fila in filasCandidatas) {
-      final String nameDbLimpio = _removeAccents((fila['product_name'] ?? '').toString().toLowerCase().trim());
-      final double precioDb = (fila['price_paid'] ?? 0.0) is int 
-          ? (fila['price_paid'] as int).toDouble() 
-          : (fila['price_paid'] ?? 0.0) as double;
-
-      if (nameDbLimpio == nombreEnLlave && precioDb == precioRef) {
-        idParaModificar = fila['id'] as int;
-        break;
-      }
-    }
-
-    if (idParaModificar != null) {
-      final DateTime nuevaFechaSimulada = DateTime.now().subtract(Duration(days: diasAntiguedad));
-      
-      await db.update(
-        'purchase_history',
-        {
-          'purchase_date': nuevaFechaSimulada.toIso8601String(),
-        },
-        where: 'id = ?',
-        whereArgs: [idParaModificar],
-      );
-    }
-
-    await refreshFromLocal();
+    // Persistimos el estado en SharedPreferences y actualizamos de forma reactiva
+    await _saveStateToLocalStorage(newState);
+    state = AsyncValue.data(newState);
   }
 
-  void limpiarHistorialCompleto() async {
+
+    void limpiarHistorialCompleto() async {
     if (!state.hasValue) return;
-    state = AsyncValue.data(state.requireValue.copyWith(historicalPrices: const []));
-    final db = await _getDatabase();
-    await db.delete('purchase_history');
+    final currentPantryState = state.requireValue;
+
+    // 🚀 ADAPTACIÓN WEB NATIVA: Seteamos la lista del historial como un arreglo vacío []
+    final newState = currentPantryState.copyWith(historicalPrices: const []);
+    
+    // Guardamos la persistencia atómica en la caché local del navegador
+    await _saveStateToLocalStorage(newState);
+    state = AsyncValue.data(newState);
   }
+
   Future<void> exportarAuditoriaPDF(BuildContext context, List<GroceryItem> purchasedItems) async {
     try {
       if (purchasedItems.isEmpty) return;
@@ -1109,7 +1030,7 @@ class PantryNotifier extends AsyncNotifier<PantryState> {
         ),
       );
 
-      if (!kIsWeb) {
+            if (!kIsWeb) {
         final Directory tempDir = await getTemporaryDirectory();
         final String pathCompleto = "${tempDir.path}/Ticket_Chispahorro.pdf";
         final File archivoPdf = File(pathCompleto);
@@ -1128,15 +1049,34 @@ class PantryNotifier extends AsyncNotifier<PantryState> {
             await procesarBunkerYVaciarCarrito(purchasedItems);
           }
         }
-            } else {
-        // 🚀 ADAPTACIÓN WEB NATIVA: Retorno seguro sin duplicación cíclica
-        return;
+      } else {
+        // 🚀 ABDRACCIÓN HÍBRIDA PREMIUM: Extraemos el flujo de bytes crudos de la RAM
+        final Uint8List pdfBytes = await pdf.save();
+        
+        // Enlazamos los datos en memoria al contenedor universal XFile de Flutter con su tipo MIME
+        final XFile webFile = XFile.fromData(
+          pdfBytes,
+          mimeType: 'application/pdf',
+          name: 'Ticket_Chispahorro.pdf',
+        );
+
+        // Disparamos el launcher web nativo abriendo la ruta del objeto Blob creado por Flutter
+                // Disparamos el launcher web nativo abriendo la ruta del objeto Blob creado por Flutter
+        await launchUrl(
+          Uri.parse(webFile.path),
+          mode: LaunchMode.platformDefault,
+        );
+
+
+        // ⚡ CIERRE DE CICLO RECOLECTOR: Vaciamos el carrito y alimentamos la IA en el navegador
+        await procesarBunkerYVaciarCarrito(purchasedItems);
       }
 
     } catch (e) {
       debugPrint('🚨 Error al procesar el reporte: $e');
     }
   }
+
 
       Future<void> enviarMetricasAnaliticasSheets(List<GroceryItem> purchasedItems) async {
     try {
