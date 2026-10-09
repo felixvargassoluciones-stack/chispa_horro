@@ -239,7 +239,7 @@ class PantryNotifier extends AsyncNotifier<PantryState> {
     return clean;
   }
 
-    Future<PantryState> _fetchItemsFromLocalDatabase() async {
+        Future<PantryState> _fetchItemsFromLocalDatabase() async {
        final prefs = await SharedPreferences.getInstance();
     final String? cachedData = prefs.getString('chispahorro_web_cache');
 
@@ -250,7 +250,12 @@ class PantryNotifier extends AsyncNotifier<PantryState> {
       } catch (e) {
         debugPrint("⚠️ Error al deserializar JSON local. Usando valores base: $e");
       }
+    } else {
+      // 🛡️ SEGURO ANTI-BORRADO PREMIUM: Si Chrome purgó el LocalStorage tras actualizar,
+      // obligamos a re-sincronizar el historial analítico directo desde la nube.
+      Future.microtask(() => verificarEstatusPremiumServidor());
     }
+
 
     final List<Map<String, dynamic>> productsResponse = [];
     final List<Map<String, dynamic>> historyResponse = [];
@@ -1053,20 +1058,20 @@ class PantryNotifier extends AsyncNotifier<PantryState> {
         }
       
 
-           } else {
+                } else {
         // 💻 ENTORNO NAVEGADOR (Celular Web / PC): Extraemos los bytes puros de la RAM
         final Uint8List pdfBytes = await pdf.save();
         
-        final webFile = XFile.fromData(
+        final XFile webFile = XFile.fromData(
           pdfBytes,
           mimeType: 'application/pdf',
           name: 'Ticket_Chispahorro.pdf',
         );
 
-        // 🚀 VISOR SENIOR INTERACTIVO: Forzamos la previsualización limpia con herramientas de compartir superiores
+        // 🚀 APERTURA EXTERNA: Forzamos una pestaña limpia del navegador saltándonos el visor de Drive
         await launchUrl(
           Uri.parse(webFile.path),
-          mode: LaunchMode.platformDefault,
+          mode: LaunchMode.externalApplication,
         );
 
         // ⚡ CIERRE DE CICLO RECOLECTOR: Vaciamos el carrito y alimentamos la IA en el navegador

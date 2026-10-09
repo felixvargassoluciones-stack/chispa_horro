@@ -870,24 +870,24 @@ final pantryState = asyncPantry.requireValue;
 
       
 
-      } else {
-
-        // 💻 ENTORNO NAVEGADOR: Extraemos los bytes puros directamente de la RAM
+               } else {
+        // 💻 ENTORNO NAVEGADOR (Celular Web / PC): Extraemos los bytes puros de la RAM
         final Uint8List pdfBytes = await pdf.save();
         
-        // Creamos el contenedor virtual universal XFile sin tocar el disco duro
+        // Creamos el contenedor virtual universal XFile usando los bytes cargados
         final XFile webFile = XFile.fromData(
           pdfBytes,
           mimeType: 'application/pdf',
           name: 'Historico_Filtrado_Chispahorro.pdf',
         );
 
-        // Disparamos la descarga nativa en Chrome abriendo el Blob virtual
         await launchUrl(
           Uri.parse(webFile.path),
-          mode: LaunchMode.platformDefault,
+          mode: LaunchMode.externalApplication,
         );
       }
+
+
 
     } catch (e) {
       if (mounted) {
