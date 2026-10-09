@@ -1058,25 +1058,23 @@ class PantryNotifier extends AsyncNotifier<PantryState> {
         }
       
 
-                } else {
-        // 💻 ENTORNO NAVEGADOR (Celular Web / PC): Extraemos los bytes puros de la RAM
+              } else {
+        // 💻 ENTORNO NAVEGADOR / PWA INSTALADA: Extraemos los bytes puros de la RAM
         final Uint8List pdfBytes = await pdf.save();
         
-        final XFile webFile = XFile.fromData(
-          pdfBytes,
-          mimeType: 'application/pdf',
-          name: 'Ticket_Chispahorro.pdf',
-        );
+        final String base64Pdf = base64Encode(pdfBytes);
+        final String urlDataUri = 'data:application/pdf;base64,$base64Pdf';
 
-        // 🚀 APERTURA EXTERNA: Forzamos una pestaña limpia del navegador saltándonos el visor de Drive
+        // 🚀 ROMPE-CASQUETES PWA: Forzamos la apertura en el navegador Chrome real fuera de la app instalada
         await launchUrl(
-          Uri.parse(webFile.path),
-          mode: LaunchMode.externalApplication,
+          Uri.parse(urlDataUri),
+          mode: LaunchMode.externalNonBrowserApplication,
         );
 
         // ⚡ CIERRE DE CICLO RECOLECTOR: Vaciamos el carrito y alimentamos la IA en el navegador
         await procesarBunkerYVaciarCarrito(purchasedItems);
       }
+
 
 
     } catch (e) {

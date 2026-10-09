@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart'; // 🚀 LÍNEA NUEVA: Para resolver el
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'pantry_provider.dart';
+import 'dart:convert'; // 🚀 LÍNEA NUEVA: Resuelve por completo el error de base64Encode
 
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
@@ -870,22 +871,21 @@ final pantryState = asyncPantry.requireValue;
 
       
 
-               } else {
-        // 💻 ENTORNO NAVEGADOR (Celular Web / PC): Extraemos los bytes puros de la RAM
+              } else {
+        // 💻 ENTORNO NAVEGADOR / PWA INSTALADA: Extraemos los bytes puros de la RAM
         final Uint8List pdfBytes = await pdf.save();
         
-        // Creamos el contenedor virtual universal XFile usando los bytes cargados
-        final XFile webFile = XFile.fromData(
-          pdfBytes,
-          mimeType: 'application/pdf',
-          name: 'Historico_Filtrado_Chispahorro.pdf',
-        );
+        // Convertimos el PDF a una cadena Base64 segura para transporte web universal
+        final String base64Pdf = base64Encode(pdfBytes);
+        final String urlDataUri = 'data:application/pdf;base64,$base64Pdf';
 
+        // 🚀 ROMPE-CASQUETES PWA: Forzamos la apertura en el navegador Chrome real fuera de la app instalada
         await launchUrl(
-          Uri.parse(webFile.path),
-          mode: LaunchMode.externalApplication,
+          Uri.parse(urlDataUri),
+          mode: LaunchMode.externalNonBrowserApplication, // 🔥 Obliga al sistema operativo a buscar el Chrome externo
         );
       }
+
 
 
 
