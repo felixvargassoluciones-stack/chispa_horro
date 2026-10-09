@@ -4,7 +4,7 @@ import 'package:flutter/foundation.dart'; // 🚀 LÍNEA NUEVA: Para resolver el
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'pantry_provider.dart';
-import 'dart:convert'; // 🚀 LÍNEA NUEVA: Resuelve por completo el error de base64Encode
+
 
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
@@ -871,20 +871,25 @@ final pantryState = asyncPantry.requireValue;
 
       
 
-              } else {
-        // 💻 ENTORNO NAVEGADOR / PWA INSTALADA: Extraemos los bytes puros de la RAM
+             } else {
+        // 💻 ENTORNO NAVEGADOR / PWA: Extraemos los bytes de la RAM de forma inmutable
         final Uint8List pdfBytes = await pdf.save();
         
-        // Convertimos el PDF a una cadena Base64 segura para transporte web universal
-        final String base64Pdf = base64Encode(pdfBytes);
-        final String urlDataUri = 'data:application/pdf;base64,$base64Pdf';
+        // Enlazamos los datos en memoria al contenedor universal XFile de Flutter
+        final XFile webFile = XFile.fromData(
+          pdfBytes,
+          mimeType: 'application/pdf',
+          name: 'Historico_Filtrado_Chispahorro.pdf',
+        );
 
-        // 🚀 ROMPE-CASQUETES PWA: Forzamos la apertura en el navegador Chrome real fuera de la app instalada
+        // 🚀 ESCAPE ABSOLUTO PWA: Forzamos la apertura en una pestaña web limpia externa
+        // Esto le quita el control a la PWA instalada y rompe el bloqueo del visor de Drive en Android
         await launchUrl(
-          Uri.parse(urlDataUri),
-          mode: LaunchMode.externalNonBrowserApplication, // 🔥 Obliga al sistema operativo a buscar el Chrome externo
+          Uri.parse(webFile.path),
+          mode: LaunchMode.externalApplication,
         );
       }
+
 
 
 
