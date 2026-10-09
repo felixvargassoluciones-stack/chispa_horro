@@ -1053,29 +1053,26 @@ class PantryNotifier extends AsyncNotifier<PantryState> {
         }
       
 
-      } else {
-
-        // 🚀 ABDRACCIÓN HÍBRIDA PREMIUM: Extraemos el flujo de bytes crudos de la RAM
+           } else {
+        // 💻 ENTORNO NAVEGADOR (Celular Web / PC): Extraemos los bytes puros de la RAM
         final Uint8List pdfBytes = await pdf.save();
         
-        // Enlazamos los datos en memoria al contenedor universal XFile de Flutter con su tipo MIME
-        final XFile webFile = XFile.fromData(
+        final webFile = XFile.fromData(
           pdfBytes,
           mimeType: 'application/pdf',
           name: 'Ticket_Chispahorro.pdf',
         );
 
-        // Disparamos el launcher web nativo abriendo la ruta del objeto Blob creado por Flutter
-                // Disparamos el launcher web nativo abriendo la ruta del objeto Blob creado por Flutter
+        // 🚀 VISOR SENIOR INTERACTIVO: Forzamos la previsualización limpia con herramientas de compartir superiores
         await launchUrl(
           Uri.parse(webFile.path),
           mode: LaunchMode.platformDefault,
         );
 
-
         // ⚡ CIERRE DE CICLO RECOLECTOR: Vaciamos el carrito y alimentamos la IA en el navegador
         await procesarBunkerYVaciarCarrito(purchasedItems);
       }
+
 
     } catch (e) {
       debugPrint('🚨 Error al procesar el reporte: $e');
