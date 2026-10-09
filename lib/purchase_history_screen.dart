@@ -1,14 +1,18 @@
+
+
+import 'package:flutter/foundation.dart'; // 🚀 LÍNEA NUEVA: Para resolver el error de 'kIsWeb'
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'pantry_provider.dart';
 
-import 'dart:io';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
-import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:url_launcher/url_launcher.dart'; // 🚀 CORRECCIÓN: Quitamos el 'as' para que funcione global directo
+import 'dart:io'; // 🚀 LÍNEA NUEVA: Resuelve los errores de 'Directory' y 'File'
+import 'package:path_provider/path_provider.dart'; // 🚀 LÍNEA NUEVA: Resuelve el error de 'getTemporaryDirectory'
 
-import 'package:url_launcher/url_launcher.dart' as url_launcher;
+
 
 
 class PurchaseHistoryScreen extends ConsumerStatefulWidget {
@@ -844,27 +848,52 @@ final pantryState = asyncPantry.requireValue;
         ),
       );
 
-      final Directory tempDir = await getTemporaryDirectory();
-      final String pathCompleto = "${tempDir.path}/Historico_Filtrado_Chispahorro.pdf";
-      final File archivoPdf = File(pathCompleto);
-      
-      await archivoPdf.writeAsBytes(await pdf.save(), flush: true);
+            // 🚀 COMPUERTA ELÁSTICA: Dividimos el flujo físico móvil del flujo en memoria RAM de la Web
+            if (!kIsWeb) {
+        // 🚀 PROTECCIÓN TOTAL: getTemporaryDirectory se ejecuta ÚNICAMENTE en celulares
+        final Directory tempDir = await getTemporaryDirectory();
+        final String pathCompleto = "${tempDir.path}/Historico_Filtrado_Chispahorro.pdf";
+        final File archivoPdf = File(pathCompleto);
+        
+        await archivoPdf.writeAsBytes(await pdf.save(), flush: true);
 
-      if (await archivoPdf.exists()) {
-        await SharePlus.instance.share(
-          ShareParams(
-            text: 'Auditoría de Precios Históricos - CHISPAHORRO INTELIGENTE',
-            files: [XFile(pathCompleto)],
-          ),
+        if (await archivoPdf.exists()) {
+          await SharePlus.instance.share(
+            ShareParams(
+              text: 'Auditoría de Precios Históricos - CHISPAHORRO INTELIGENTE',
+              files: [XFile(pathCompleto)],
+            ),
+          );
+        }
+
+
+      } else {
+        // 💻 ENTORNO NAVEGADOR: Extraemos los bytes puros directamente de la RAM
+        final Uint8List pdfBytes = await pdf.save();
+        
+        // Creamos el contenedor virtual universal XFile sin tocar el disco duro
+        final XFile webFile = XFile.fromData(
+          pdfBytes,
+          mimeType: 'application/pdf',
+          name: 'Historico_Filtrado_Chispahorro.pdf',
+        );
+
+        // Disparamos la descarga nativa en Chrome abriendo el Blob virtual
+        await launchUrl(
+          Uri.parse(webFile.path),
+          mode: LaunchMode.platformDefault,
         );
       }
+
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('🚨 Error al procesar el PDF del historial: $e')),
+          SnackBar(content: Text('⚠️ Error al procesar el PDF del historial: $e')),
         );
       }
     }
+
+
   }
 
 
@@ -1035,7 +1064,11 @@ final pantryState = asyncPantry.requireValue;
 
 
     try {
-      await url_launcher.launchUrl(Uri.parse(urlTexto), mode: url_launcher.LaunchMode.externalApplication);
+         await launchUrl(
+      Uri.parse(urlTexto), 
+      mode: LaunchMode.externalApplication,
+    );
+
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
