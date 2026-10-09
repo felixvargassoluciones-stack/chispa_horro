@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'pantry_provider.dart';
 
-
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:share_plus/share_plus.dart';
@@ -871,26 +870,22 @@ final pantryState = asyncPantry.requireValue;
 
       
 
-             } else {
-        // 💻 ENTORNO NAVEGADOR / PWA: Extraemos los bytes de la RAM de forma inmutable
+               } else {
+        // 💻 ENTORNO NAVEGADOR (Celular Web / PC): Extraemos los bytes puros de la RAM
         final Uint8List pdfBytes = await pdf.save();
         
-        // Enlazamos los datos en memoria al contenedor universal XFile de Flutter
+        // Creamos el contenedor virtual universal XFile usando los bytes cargados
         final XFile webFile = XFile.fromData(
           pdfBytes,
           mimeType: 'application/pdf',
           name: 'Historico_Filtrado_Chispahorro.pdf',
         );
 
-        // 🚀 ESCAPE ABSOLUTO PWA: Forzamos la apertura en una pestaña web limpia externa
-        // Esto le quita el control a la PWA instalada y rompe el bloqueo del visor de Drive en Android
         await launchUrl(
           Uri.parse(webFile.path),
           mode: LaunchMode.externalApplication,
         );
       }
-
-
 
 
 
