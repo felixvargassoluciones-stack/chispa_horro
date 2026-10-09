@@ -1030,7 +1030,7 @@ class PantryNotifier extends AsyncNotifier<PantryState> {
         ),
       );
 
-            if (!kIsWeb) {
+               if (!kIsWeb) {
         final Directory tempDir = await getTemporaryDirectory();
         final String pathCompleto = "${tempDir.path}/Ticket_Chispahorro.pdf";
         final File archivoPdf = File(pathCompleto);
@@ -1038,18 +1038,21 @@ class PantryNotifier extends AsyncNotifier<PantryState> {
         await archivoPdf.writeAsBytes(await pdf.save(), flush: true);
 
         if (await archivoPdf.exists()) {
-          final shareResult = await SharePlus.instance.share(
+          // 📢 DISPARADOR NATIVO PREMIUM: Abre directamente la ventana de compartir y vacía el búnker al finalizar
+                   final shareResult = await SharePlus.instance.share(
             ShareParams(
               text: 'Resguardo Oficial de Compra - CHISPAHORRO INTELIGENTE',
               files: [XFile(pathCompleto)],
             ),
           );
 
+
           if (shareResult.status != ShareResultStatus.dismissed) {
             await procesarBunkerYVaciarCarrito(purchasedItems);
           }
         }
       } else {
+
         // 🚀 ABDRACCIÓN HÍBRIDA PREMIUM: Extraemos el flujo de bytes crudos de la RAM
         final Uint8List pdfBytes = await pdf.save();
         
