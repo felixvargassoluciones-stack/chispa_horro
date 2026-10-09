@@ -1030,7 +1030,7 @@ class PantryNotifier extends AsyncNotifier<PantryState> {
         ),
       );
 
-               if (!kIsWeb) {
+                if (!kIsWeb) {
         final Directory tempDir = await getTemporaryDirectory();
         final String pathCompleto = "${tempDir.path}/Ticket_Chispahorro.pdf";
         final File archivoPdf = File(pathCompleto);
@@ -1038,19 +1038,21 @@ class PantryNotifier extends AsyncNotifier<PantryState> {
         await archivoPdf.writeAsBytes(await pdf.save(), flush: true);
 
         if (await archivoPdf.exists()) {
-          // 📢 DISPARADOR NATIVO PREMIUM: Abre directamente la ventana de compartir y vacía el búnker al finalizar
-                   final shareResult = await SharePlus.instance.share(
+          // 📢 PUENTE DE HARDWARE: Invoca el menú binario nativo con escucha activa de estatus
+                    // 📢 DISPARADOR PREMIUM: Despliega el menú interactivo nativo y limpia el búnker síncronamente al salir
+          await SharePlus.instance.share(
             ShareParams(
               text: 'Resguardo Oficial de Compra - CHISPAHORRO INTELIGENTE',
               files: [XFile(pathCompleto)],
             ),
           );
 
+          // ⚡ VACÍO DE RAM ATÓMICO: Ejecución directa garantizada al cerrar el canal de hardware
+          await procesarBunkerYVaciarCarrito(purchasedItems);
 
-          if (shareResult.status != ShareResultStatus.dismissed) {
-            await procesarBunkerYVaciarCarrito(purchasedItems);
-          }
         }
+      
+
       } else {
 
         // 🚀 ABDRACCIÓN HÍBRIDA PREMIUM: Extraemos el flujo de bytes crudos de la RAM

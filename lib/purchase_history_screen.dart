@@ -848,27 +848,28 @@ final pantryState = asyncPantry.requireValue;
         ),
       );
 
-            // 🚀 COMPUERTA ELÁSTICA: Dividimos el flujo físico móvil del flujo en memoria RAM de la Web
-                // 🚀 COMPUERTA ELÁSTICA: Dividimos el flujo físico móvil del flujo en memoria RAM de la Web
-      if (!kIsWeb) {
-        // Todo lo que use path_provider y dart:io se ejecuta estrictamente en celulares
+               if (!kIsWeb) {
+        // 🚀 CONTROL NATIVO MÓVIL: path_provider aislado quirúrgicamente para teléfonos
         final Directory tempDir = await getTemporaryDirectory();
         final String pathCompleto = "${tempDir.path}/Historico_Filtrado_Chispahorro.pdf";
         final File archivoPdf = File(pathCompleto);
         
-        // Escribimos los bytes físicos en el almacenamiento temporal seguro del móvil
+        // Escribimos los bytes crudos directamente en la memoria caché física del móvil
         await archivoPdf.writeAsBytes(await pdf.save(), flush: true);
 
         if (await archivoPdf.exists()) {
-          // 📢 DISPARADOR NATIVO PREMIUM: Forzamos la apertura directa de la ventana de compartir
-                   await SharePlus.instance.share(
+                    // 📢 DISPARADOR PREMIUM DE ÚLTIMA GENERACIÓN: Abre la hoja nativa de compartir apps sin errores
+          await SharePlus.instance.share(
             ShareParams(
               text: 'Auditoría de Precios Históricos - CHISPAHORRO INTELIGENTE',
               files: [XFile(pathCompleto)],
             ),
           );
+         }
+      
 
-        }
+      
+
       } else {
 
         // 💻 ENTORNO NAVEGADOR: Extraemos los bytes puros directamente de la RAM
