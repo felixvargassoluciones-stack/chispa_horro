@@ -239,7 +239,7 @@ class PantryNotifier extends AsyncNotifier<PantryState> {
     return clean;
   }
 
-    Future<PantryState> _fetchItemsFromLocalDatabase() async {
+        Future<PantryState> _fetchItemsFromLocalDatabase() async {
        final prefs = await SharedPreferences.getInstance();
     final String? cachedData = prefs.getString('chispahorro_web_cache');
 
@@ -250,7 +250,12 @@ class PantryNotifier extends AsyncNotifier<PantryState> {
       } catch (e) {
         debugPrint("⚠️ Error al deserializar JSON local. Usando valores base: $e");
       }
+    } else {
+      // 🛡️ SEGURO ANTI-BORRADO PREMIUM: Si Chrome purgó el LocalStorage tras actualizar,
+      // obligamos a re-sincronizar el historial analítico directo desde la nube.
+      Future.microtask(() => verificarEstatusPremiumServidor());
     }
+
 
     final List<Map<String, dynamic>> productsResponse = [];
     final List<Map<String, dynamic>> historyResponse = [];
@@ -1053,25 +1058,83 @@ class PantryNotifier extends AsyncNotifier<PantryState> {
         }
       
 
-           } else {
-        // 💻 ENTORNO NAVEGADOR (Celular Web / PC): Extraemos los bytes puros de la RAM
+        } else {
+        // 🧠 Capturamos las dimensiones exactas de la pantalla antes del await asíncrono
+        final double anchoPantalla = MediaQuery.of(context).size.width;
+        final double altoPantalla = MediaQuery.of(context).size.height;
+
+        // 💻 ENTORNO NAVEGADOR / PWA INSTALADA: Extraemos los bytes puros de la RAM
         final Uint8List pdfBytes = await pdf.save();
         
-        final webFile = XFile.fromData(
-          pdfBytes,
-          mimeType: 'application/pdf',
-          name: 'Ticket_Chispahorro.pdf',
-        );
+        // Convertimos el PDF a una cadena Base64 segura para el visor interno de Flutter Web
+        final String base64Pdf = base64Encode(pdfBytes);
+        final String dataUri = 'data:application/pdf;base64,$base64Pdf';
 
-        // 🚀 VISOR SENIOR INTERACTIVO: Forzamos la previsualización limpia con herramientas de compartir superiores
-        await launchUrl(
-          Uri.parse(webFile.path),
-          mode: LaunchMode.platformDefault,
-        );
+        // 🚀 ESCUDO ASÍNCRONO DE SEGURIDAD: Validamos que el árbol visual siga de pie antes de invocar el diálogo
+        if (!context.mounted) return;
 
-        // ⚡ CIERRE DE CICLO RECOLECTOR: Vaciamos el carrito y alimentamos la IA en el navegador
-        await procesarBunkerYVaciarCarrito(purchasedItems);
+        showDialog(
+          context: context,
+          builder: (BuildContext dialogContext) {
+            return AlertDialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              title: const Row(
+                children: [
+                  Icon(Icons.analytics_rounded, color: Color(0xFF0D47A1)),
+                  SizedBox(width: 8),
+                  Text('Previsualización del Reporte', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+                ],
+              ),
+              content: SizedBox(
+                width: anchoPantalla * 0.9,
+                height: altoPantalla * 0.5,
+                // Inyectamos el frame web que renderiza el PDF directo en la RAM saltándonos el visor del teléfono
+                child: HtmlElementView(
+                  viewType: 'pwa-pdf-viewer',
+                  onPlatformViewCreated: (int viewId) {},
+                ),
+              ),
+              actionsAlignment: MainAxisAlignment.spaceBetween,
+              actions: [
+                TextButton(
+                  onPressed: () async {
+                    Navigator.pop(dialogContext);
+                    // ⚡ CIERRE DE CICLO RECOLECTOR: Vaciamos el carrito y alimentamos la IA al cerrar
+                    await procesarBunkerYVaciarCarrito(purchasedItems);
+                  },
+                  child: const Text('Cerrar', style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
+                ),
+                Row(
+                  children: [
+                    // 📥 Descarga Física Directa desde el String Base64
+                    ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(backgroundColor: Colors.grey.shade200, foregroundColor: Colors.black87),
+                      icon: const Icon(Icons.download_rounded, size: 16),
+                      label: const Text('Descargar'),
+                      onPressed: () async {
+                        await launchUrl(Uri.parse(dataUri), mode: LaunchMode.platformDefault);
+                      },
+                    ),
+                    const SizedBox(width: 8),
+                    // 💬 Envío directo saltando el ecosistema de edición nativo del teléfono
+                    ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(backgroundColor: Colors.green, foregroundColor: Colors.white),
+                      icon: const Icon(Icons.send_rounded, size: 16),
+                      label: const Text('WhatsApp'),
+                      onPressed: () async {
+                        const String mensajeWhatsApp = 'Hola, te comparto mi Reporte de Compra Reciente de ChispaHorro⚡';
+                        final String urlWithData = "https://wa.me${Uri.encodeComponent(mensajeWhatsApp)}";
+                        await launchUrl(Uri.parse(urlWithData), mode: LaunchMode.externalApplication);
+                      },
+                    ),
+                  ],
+                ),
+              ],
+            );
+          },
+        );
       }
+
 
 
     } catch (e) {

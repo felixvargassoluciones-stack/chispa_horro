@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart'; // 🚀 LÍNEA NUEVA: Para resolver el
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'pantry_provider.dart';
+import 'dart:convert'; // 🚀 LÍNEA NUEVA: Resuelve por completo el error de base64Encode
 
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
@@ -870,32 +871,90 @@ final pantryState = asyncPantry.requireValue;
 
       
 
-               } else {
-        // 💻 ENTORNO NAVEGADOR (Celular Web / PC): Extraemos los bytes puros de la RAM
+             } else {
+        // 🧠 Capturamos las dimensiones del dispositivo ANTES de la brecha asíncrona del await
+        final double anchoPantalla = MediaQuery.of(context).size.width;
+        final double altoPantalla = MediaQuery.of(context).size.height;
+
+        // 💻 ENTORNO NAVEGADOR / PWA INSTALADA: Extraemos los bytes puros de la RAM
         final Uint8List pdfBytes = await pdf.save();
         
-        // Creamos el contenedor virtual universal XFile usando los bytes cargados
-        final XFile webFile = XFile.fromData(
-          pdfBytes,
-          mimeType: 'application/pdf',
-          name: 'Historico_Filtrado_Chispahorro.pdf',
+        // Convertimos el PDF a una cadena Base64 segura para el visor interno de Flutter Web
+        final String base64Pdf = base64Encode(pdfBytes);
+        final String dataUri = 'data:application/pdf;base64,$base64Pdf';
+
+        // 🚀 ESCUDO ASÍNCRONO PERFECTO: Evaluamos la propiedad nativa del ciclo de vida del State
+        if (!mounted) return;
+
+        showDialog(
+          context: context,
+          builder: (BuildContext dialogContext) {
+            return AlertDialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              title: const Row(
+                children: [
+                  Icon(Icons.analytics_rounded, color: Color(0xFF0D47A1)),
+                  SizedBox(width: 8),
+                  Text('Previsualización del Reporte', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+                ],
+              ),
+              content: SizedBox(
+                width: anchoPantalla * 0.9,  // ⚡ Corregido: Usa la variable local segura sin consultar el contexto
+                height: altoPantalla * 0.5, // ⚡ Corregido: Usa la variable local segura sin consultar el contexto
+
+            child: HtmlElementView(
+              viewType: 'pwa-pdf-viewer',
+              onPlatformViewCreated: (int viewId) {},
+            ),
+          ),
+          actionsAlignment: MainAxisAlignment.spaceBetween,
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Cerrar', style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
+            ),
+            Row(
+              children: [
+                ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(backgroundColor: Colors.grey.shade200, foregroundColor: Colors.black87),
+                  icon: const Icon(Icons.download_rounded, size: 16),
+                  label: const Text('Descargar'),
+                  onPressed: () async {
+                    await launchUrl(Uri.parse(dataUri), mode: LaunchMode.platformDefault);
+                  },
+                ),
+                const SizedBox(width: 8),
+                ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(backgroundColor: Colors.green, foregroundColor: Colors.white),
+                  icon: const Icon(Icons.send_rounded, size: 16),
+                  label: const Text('WhatsApp'),
+                  onPressed: () async {
+                    const String mensajeWhatsApp = 'Hola, te comparto mi Reporte Histórico de ChispaHorro⚡';
+                    // ⚡ SINCRO DE MAYÚSCULAS Y SINTAXIS: Concatenamos de forma segura el mensaje dentro de wa.me
+                    final String urlWhatsapp = "https://wa.me${Uri.encodeComponent(mensajeWhatsApp)}";
+                    await launchUrl(Uri.parse(urlWhatsapp), mode: LaunchMode.externalApplication);
+                  },
+                ),
+              ],
+            ),
+          ],
         );
-
-        await launchUrl(
-          Uri.parse(webFile.path),
-          mode: LaunchMode.externalApplication,
-        );
-      }
+      },
+    );
+  }
 
 
 
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('⚠️ Error al procesar el PDF del historial: $e')),
-        );
-      }
+
+          } catch (e) {
+      if (!mounted) return; // ⚡ Corregido: Usa la propiedad del ciclo de vida nativa del State
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('⚠️ Error al procesar el PDF del historial: $e')),
+      );
     }
+
+
+    
 
 
   }
