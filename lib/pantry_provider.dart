@@ -1,6 +1,10 @@
 import 'dart:convert';
 import 'dart:async';
 import 'dart:io';
+import 'dart:js_interop';
+import 'package:web/web.dart' as web;
+
+
 import 'package:flutter/foundation.dart'; // 🚀 SOPORTE WEB: Indispensable para usar kIsWeb
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -11,9 +15,6 @@ import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'grocery_item.dart';
 import 'database_helper.dart';
-
-import 'package:url_launcher/url_launcher.dart'; // 🚀 LÍNEA NUEVA A INYECTAR
-
 
 import 'package:http/http.dart' as http;
 
@@ -124,7 +125,7 @@ class PantryNotifier extends AsyncNotifier<PantryState> {
       final PantryState estadoCargado = await _fetchItemsFromLocalDatabase();
 
       // ⚡ DISPARO AUTOMÁTICO AL INICIAR: Revisa el estatus de pago en segundo plano usando el ID permanente
-      Future.microtask(() => verificarEstatusPremiumServidor());
+      Future.microtask(() => verpZEAWYtiB6bJ16NuLbGCc6CZ6jJdKfb63());
 
       return estadoCargado;
     } catch (e, stackTrace) {
@@ -239,7 +240,7 @@ class PantryNotifier extends AsyncNotifier<PantryState> {
     return clean;
   }
 
-        Future<PantryState> _fetchItemsFromLocalDatabase() async {
+    Future<PantryState> _fetchItemsFromLocalDatabase() async {
        final prefs = await SharedPreferences.getInstance();
     final String? cachedData = prefs.getString('chispahorro_web_cache');
 
@@ -250,12 +251,7 @@ class PantryNotifier extends AsyncNotifier<PantryState> {
       } catch (e) {
         debugPrint("⚠️ Error al deserializar JSON local. Usando valores base: $e");
       }
-    } else {
-      // 🛡️ SEGURO ANTI-BORRADO PREMIUM: Si Chrome purgó el LocalStorage tras actualizar,
-      // obligamos a re-sincronizar el historial analítico directo desde la nube.
-      Future.microtask(() => verificarEstatusPremiumServidor());
     }
-
 
     final List<Map<String, dynamic>> productsResponse = [];
     final List<Map<String, dynamic>> historyResponse = [];
@@ -389,17 +385,17 @@ class PantryNotifier extends AsyncNotifier<PantryState> {
         return dateB.compareTo(dateA);
       });
 
-    final Set<String> productosYaProcesadosPredictivos = {};
+    final Set<String> prpZEAWYtiB6bJ16NuLbGCc6CZ6jJdKfb63 = {};
 
     for (var entry in sortedMetaEntries) {
       final meta = entry.value;
       final String metaName = meta['name'] as String;
       final String cleanNormalName = _removeAccents(metaName.toLowerCase().trim());
       
-      if (productosYaProcesadosPredictivos.contains(cleanNormalName)) {
+      if (prpZEAWYtiB6bJ16NuLbGCc6CZ6jJdKfb63.contains(cleanNormalName)) {
         continue;
       }
-      productosYaProcesadosPredictivos.add(cleanNormalName);
+      prpZEAWYtiB6bJ16NuLbGCc6CZ6jJdKfb63.add(cleanNormalName);
 
       final String metaCategory = meta['category'] as String;
       final DateTime lastDate = meta['date'] as DateTime;
@@ -1035,7 +1031,7 @@ class PantryNotifier extends AsyncNotifier<PantryState> {
         ),
       );
 
-                if (!kIsWeb) {
+      if (!kIsWeb) {
         final Directory tempDir = await getTemporaryDirectory();
         final String pathCompleto = "${tempDir.path}/Ticket_Chispahorro.pdf";
         final File archivoPdf = File(pathCompleto);
@@ -1043,96 +1039,35 @@ class PantryNotifier extends AsyncNotifier<PantryState> {
         await archivoPdf.writeAsBytes(await pdf.save(), flush: true);
 
         if (await archivoPdf.exists()) {
-          // 📢 PUENTE DE HARDWARE: Invoca el menú binario nativo con escucha activa de estatus
-                    // 📢 DISPARADOR PREMIUM: Despliega el menú interactivo nativo y limpia el búnker síncronamente al salir
-          await SharePlus.instance.share(
+          final shareResult = await SharePlus.instance.share(
             ShareParams(
               text: 'Resguardo Oficial de Compra - CHISPAHORRO INTELIGENTE',
               files: [XFile(pathCompleto)],
             ),
           );
 
-          // ⚡ VACÍO DE RAM ATÓMICO: Ejecución directa garantizada al cerrar el canal de hardware
-          await procesarBunkerYVaciarCarrito(purchasedItems);
-
+          if (shareResult.status != ShareResultStatus.dismissed) {
+            await procesarBunkerYVaciarCarrito(purchasedItems);
+          }
         }
-      
-
-        } else {
-        // 🧠 Capturamos las dimensiones exactas de la pantalla antes del await asíncrono
-        final double anchoPantalla = MediaQuery.of(context).size.width;
-        final double altoPantalla = MediaQuery.of(context).size.height;
-
-        // 💻 ENTORNO NAVEGADOR / PWA INSTALADA: Extraemos los bytes puros de la RAM
+                    } else {
+        // 💻 ENTORNO NAVEGADOR / APP INSTALADA: Extraemos los bytes puros de la RAM
         final Uint8List pdfBytes = await pdf.save();
         
-        // Convertimos el PDF a una cadena Base64 segura para el visor interno de Flutter Web
-        final String base64Pdf = base64Encode(pdfBytes);
-        final String dataUri = 'data:application/pdf;base64,$base64Pdf';
-
-        // 🚀 ESCUDO ASÍNCRONO DE SEGURIDAD: Validamos que el árbol visual siga de pie antes de invocar el diálogo
-        if (!context.mounted) return;
-
-        showDialog(
-          context: context,
-          builder: (BuildContext dialogContext) {
-            return AlertDialog(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              title: const Row(
-                children: [
-                  Icon(Icons.analytics_rounded, color: Color(0xFF0D47A1)),
-                  SizedBox(width: 8),
-                  Text('Previsualización del Reporte', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-                ],
-              ),
-              content: SizedBox(
-                width: anchoPantalla * 0.9,
-                height: altoPantalla * 0.5,
-                // Inyectamos el frame web que renderiza el PDF directo en la RAM saltándonos el visor del teléfono
-                child: HtmlElementView(
-                  viewType: 'pwa-pdf-viewer',
-                  onPlatformViewCreated: (int viewId) {},
-                ),
-              ),
-              actionsAlignment: MainAxisAlignment.spaceBetween,
-              actions: [
-                TextButton(
-                  onPressed: () async {
-                    Navigator.pop(dialogContext);
-                    // ⚡ CIERRE DE CICLO RECOLECTOR: Vaciamos el carrito y alimentamos la IA al cerrar
-                    await procesarBunkerYVaciarCarrito(purchasedItems);
-                  },
-                  child: const Text('Cerrar', style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
-                ),
-                Row(
-                  children: [
-                    // 📥 Descarga Física Directa desde el String Base64
-                    ElevatedButton.icon(
-                      style: ElevatedButton.styleFrom(backgroundColor: Colors.grey.shade200, foregroundColor: Colors.black87),
-                      icon: const Icon(Icons.download_rounded, size: 16),
-                      label: const Text('Descargar'),
-                      onPressed: () async {
-                        await launchUrl(Uri.parse(dataUri), mode: LaunchMode.platformDefault);
-                      },
-                    ),
-                    const SizedBox(width: 8),
-                    // 💬 Envío directo saltando el ecosistema de edición nativo del teléfono
-                    ElevatedButton.icon(
-                      style: ElevatedButton.styleFrom(backgroundColor: Colors.green, foregroundColor: Colors.white),
-                      icon: const Icon(Icons.send_rounded, size: 16),
-                      label: const Text('WhatsApp'),
-                      onPressed: () async {
-                        const String mensajeWhatsApp = 'Hola, te comparto mi Reporte de Compra Reciente de ChispaHorro⚡';
-                        final String urlWithData = "https://wa.me${Uri.encodeComponent(mensajeWhatsApp)}";
-                        await launchUrl(Uri.parse(urlWithData), mode: LaunchMode.externalApplication);
-                      },
-                    ),
-                  ],
-                ),
-              ],
-            );
-          },
+        // Convertimos de forma segura los bytes a un array compatible con el motor JS del navegador
+        final web.Blob blob = web.Blob(
+          [pdfBytes.toJS].toJS,
+          web.BlobPropertyBag(type: 'application/pdf'),
         );
+        
+        // Generamos la URL de objeto web a través del motor unificado de Google
+        final String urlObjetoWeb = web.URL.createObjectURL(blob);
+
+        // 🚀 APERTURA NATIVA: Solicitamos al sistema operativo abrir el PDF en una pestaña de Chrome/Safari externa
+        web.window.open(urlObjetoWeb, '_blank');
+
+        // ⚡ CIERRE DE CICLO RECOLECTOR: Vaciamos el carrito de forma síncrona en la caché JSON
+        await procesarBunkerYVaciarCarrito(purchasedItems);
       }
 
 
@@ -1141,7 +1076,6 @@ class PantryNotifier extends AsyncNotifier<PantryState> {
       debugPrint('🚨 Error al procesar el reporte: $e');
     }
   }
-
 
       Future<void> enviarMetricasAnaliticasSheets(List<GroceryItem> purchasedItems) async {
     try {
@@ -1278,7 +1212,7 @@ class PantryNotifier extends AsyncNotifier<PantryState> {
 
 
      // 🛰️ MOTOR DE VERIFICACIÓN VIP: Consulta en vivo el estatus dinámico en la macro de Google
-  Future<void> verificarEstatusPremiumServidor() async {
+  Future<void> verpZEAWYtiB6bJ16NuLbGCc6CZ6jJdKfb63() async {
     final currentState = state.value;
     if (currentState == null) return;
 

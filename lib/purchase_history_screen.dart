@@ -1,17 +1,16 @@
-
-
-import 'package:flutter/foundation.dart'; // 🚀 LÍNEA NUEVA: Para resolver el error de 'kIsWeb'
+import 'dart:io'; 
+import 'dart:js_interop'; // 🌐 Necesario para convertir flujos binarios al estándar JS moderno
+import 'package:flutter/foundation.dart'; 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'pantry_provider.dart';
-import 'dart:convert'; // 🚀 LÍNEA NUEVA: Resuelve por completo el error de base64Encode
+import 'package:path_provider/path_provider.dart';
 
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:share_plus/share_plus.dart';
-import 'package:url_launcher/url_launcher.dart'; // 🚀 CORRECCIÓN: Quitamos el 'as' para que funcione global directo
-import 'dart:io'; // 🚀 LÍNEA NUEVA: Resuelve los errores de 'Directory' y 'File'
-import 'package:path_provider/path_provider.dart'; // 🚀 LÍNEA NUEVA: Resuelve el error de 'getTemporaryDirectory'
+import 'package:url_launcher/url_launcher.dart'; 
+import 'package:web/web.dart' as web; // 🚀 El nuevo estándar global de Google que sustituye a dart:html
 
 
 
@@ -871,90 +870,35 @@ final pantryState = asyncPantry.requireValue;
 
       
 
-             } else {
-        // 🧠 Capturamos las dimensiones del dispositivo ANTES de la brecha asíncrona del await
-        final double anchoPantalla = MediaQuery.of(context).size.width;
-        final double altoPantalla = MediaQuery.of(context).size.height;
-
-        // 💻 ENTORNO NAVEGADOR / PWA INSTALADA: Extraemos los bytes puros de la RAM
+          } else {
+        // 💻 ENTORNO NAVEGADOR / APP INSTALADA: Extraemos los bytes puros de la RAM
         final Uint8List pdfBytes = await pdf.save();
-        
-        // Convertimos el PDF a una cadena Base64 segura para el visor interno de Flutter Web
-        final String base64Pdf = base64Encode(pdfBytes);
-        final String dataUri = 'data:application/pdf;base64,$base64Pdf';
 
-        // 🚀 ESCUDO ASÍNCRONO PERFECTO: Evaluamos la propiedad nativa del ciclo de vida del State
-        if (!mounted) return;
-
-        showDialog(
-          context: context,
-          builder: (BuildContext dialogContext) {
-            return AlertDialog(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              title: const Row(
-                children: [
-                  Icon(Icons.analytics_rounded, color: Color(0xFF0D47A1)),
-                  SizedBox(width: 8),
-                  Text('Previsualización del Reporte', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-                ],
-              ),
-              content: SizedBox(
-                width: anchoPantalla * 0.9,  // ⚡ Corregido: Usa la variable local segura sin consultar el contexto
-                height: altoPantalla * 0.5, // ⚡ Corregido: Usa la variable local segura sin consultar el contexto
-
-            child: HtmlElementView(
-              viewType: 'pwa-pdf-viewer',
-              onPlatformViewCreated: (int viewId) {},
-            ),
-          ),
-          actionsAlignment: MainAxisAlignment.spaceBetween,
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext),
-              child: const Text('Cerrar', style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
-            ),
-            Row(
-              children: [
-                ElevatedButton.icon(
-                  style: ElevatedButton.styleFrom(backgroundColor: Colors.grey.shade200, foregroundColor: Colors.black87),
-                  icon: const Icon(Icons.download_rounded, size: 16),
-                  label: const Text('Descargar'),
-                  onPressed: () async {
-                    await launchUrl(Uri.parse(dataUri), mode: LaunchMode.platformDefault);
-                  },
-                ),
-                const SizedBox(width: 8),
-                ElevatedButton.icon(
-                  style: ElevatedButton.styleFrom(backgroundColor: Colors.green, foregroundColor: Colors.white),
-                  icon: const Icon(Icons.send_rounded, size: 16),
-                  label: const Text('WhatsApp'),
-                  onPressed: () async {
-                    const String mensajeWhatsApp = 'Hola, te comparto mi Reporte Histórico de ChispaHorro⚡';
-                    // ⚡ SINCRO DE MAYÚSCULAS Y SINTAXIS: Concatenamos de forma segura el mensaje dentro de wa.me
-                    final String urlWhatsapp = "https://wa.me${Uri.encodeComponent(mensajeWhatsApp)}";
-                    await launchUrl(Uri.parse(urlWhatsapp), mode: LaunchMode.externalApplication);
-                  },
-                ),
-              ],
-            ),
-          ],
+        // Convertimos de forma segura los bytes a un array compatible con el motor JS del navegador
+        final web.Blob blob = web.Blob(
+          [pdfBytes.toJS].toJS,
+          web.BlobPropertyBag(type: 'application/pdf'),
         );
-      },
-    );
-  }
+
+        // Generamos la URL de objeto web a través del motor unificado de Google
+        final String urlObjetoWeb = web.URL.createObjectURL(blob);
+
+        // 🚀 APERTURA NATIVA: Solicitamos al sistema operativo abrir el PDF en una pestaña de Chrome/Safari externa
+        web.window.open(urlObjetoWeb, '_blank');
+      }
+
+
+      
 
 
 
-
-          } catch (e) {
-      if (!mounted) return; // ⚡ Corregido: Usa la propiedad del ciclo de vida nativa del State
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('⚠️ Error al procesar el PDF del historial: $e')),
-      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('⚠️ Error al procesar el PDF del historial: $e')),
+        );
+      }
     }
-
-
-    
 
 
   }
