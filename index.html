@@ -9,12 +9,12 @@
     it to work correctly.
 
     For more details:
-    * https://developer.mozilla.org/en-US/docs/Web/HTML/Element/base
+    * https://mozilla.org
 
     This is a placeholder for base href that will be replaced by the value of
     the `--base-href` argument provided to `flutter build`.
   -->
-  <base href="/chispa_horro/">
+  <base href="\/chispa_horro/">
 
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
@@ -33,13 +33,31 @@
   <link rel="manifest" href="manifest.json">
 </head>
 <body>
+  <!-- Carga de los SDKs de Firebase necesarios para la Web -->
+  <script type="module">
+    import { initializeApp } from "https://gstatic.com";
+    
+    // Configuración de tu aplicación Firebase Cloud
+    const firebaseConfig = {
+      apiKey: "AIzaSyADxtTPQvZB-TcOf_esOCcEZs5-bvZYKow",
+      authDomain: "://firebaseapp.com",
+      projectId: "chispa-9cd5a",
+      storageBucket: "chispa-9cd5a.firebasestorage.app",
+      messagingSenderId: "431543567650",
+      appId: "1:431543567650:web:2c63ac5c5ee81772fbd17b"
+    };
+
+    // Inicializar Firebase en el navegador antes de que cargue Flutter
+    const app = initializeApp(firebaseConfig);
+  </script>
+
   <!--
     You can customize the "flutter_bootstrap.js" script.
     This is useful to provide a custom configuration to the Flutter loader
     or to give the user feedback during the initialization process.
 
     For more details:
-    * https://docs.flutter.dev/platform-integration/web/initialization
+    * https://flutter.dev
   -->
   <script src="flutter_bootstrap.js" async></script>
 </body>
